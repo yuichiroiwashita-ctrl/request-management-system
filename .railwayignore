@@ -1,0 +1,14 @@
+node_modules/
+*.db
+.env
+uploads/*
+!uploads/.gitkeep
+*.md
+!README.md
+debug.html
+index.html
+cloudbuild.yaml
+app.yaml
+vercel.json
+Dockerfile
+.gensparkspace
