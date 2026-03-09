@@ -1,0 +1,11 @@
+build:
+  command: npm install
+  output: .
+
+run:
+  command: npm start
+  port: 8080
+
+routes:
+  - src: /(.*)
+    dest: /

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Request - ダッシュボード</title>
+  <link rel="stylesheet" href="/public/styles.css">
+</head>
+<body>
+  <!-- ヘッダー -->
+  <header class="header">
+    <div class="header-brand">Request</div>
+    <div class="header-user">
+      <span class="header-username" id="username">読み込み中...</span>
+      <a href="/api/auth/logout" class="header-link">ログアウト</a>
+    </div>
+  </header>
+
+  <!-- ナビゲーション -->
+  <nav class="nav-tabs">
+    <button class="nav-tab active" data-tab="received">受信したリクエスト</button>
+    <button class="nav-tab" data-tab="sent">送信したリクエスト</button>
+    <button class="nav-tab" data-tab="all">すべて</button>
+  </nav>
+
+  <!-- メインコンテンツ -->
+  <main class="main-content">
+    <!-- 統計情報 -->
+    <div class="stats-grid" id="stats">
+      <!-- JavaScriptで動的に生成 -->
+    </div>
+
+    <!-- セクションヘッダー -->
+    <div class="section-header">
+      <h2 class="section-title" id="section-title">受信したリクエスト</h2>
+      <button class="btn btn-primary" id="btn-new-request">
+        新規リクエスト作成
+      </button>
+    </div>
+
+    <!-- リクエスト一覧 -->
+    <div class="requests-list" id="requests-list">
+      <!-- JavaScriptで動的に生成 -->
+    </div>
+
+    <!-- エンプティステート -->
+    <div class="empty-state hidden" id="empty-state">
+      <div class="empty-state-icon">📭</div>
+      <p class="empty-state-text">リクエストがありません</p>
+    </div>
+  </main>
+
+  <!-- リクエスト作成モーダル -->
+  <div class="modal" id="modal-create-request">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">新規リクエスト作成</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-create-request">
+          <div class="form-group">
+            <label class="form-label" for="request-title">タイトル</label>
+            <input type="text" class="form-input" id="request-title" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="request-content">内容</label>
+            <textarea class="form-textarea" id="request-content" required></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="request-deadline">期日</label>
+            <input type="datetime-local" class="form-input" id="request-deadline" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="request-recipient">宛先（Talknoteユーザー）</label>
+            <select class="form-select" id="request-recipient" required>
+              <option value="">選択してください</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="request-group">通知先（Talknoteグループ）</label>
+            <select class="form-select" id="request-group" required>
+              <option value="">選択してください</option>
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-action="cancel">キャンセル</button>
+        <button class="btn btn-primary" data-action="submit">作成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- リクエスト詳細モーダル -->
+  <div class="modal" id="modal-request-detail">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">リクエスト詳細</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="request-detail-content">
+        <!-- JavaScriptで動的に生成 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 期日延長申請モーダル -->
+  <div class="modal" id="modal-extension-request">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">期日延長申請</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-meta mb-3" id="extension-current-info">
+          <!-- 現在の期日情報 -->
+        </div>
+        <form id="form-extension-request">
+          <div class="form-group">
+            <label class="form-label" for="extension-new-deadline">新しい希望期日</label>
+            <input type="datetime-local" class="form-input" id="extension-new-deadline" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="extension-reason">延長理由（必須）</label>
+            <textarea class="form-textarea" id="extension-reason" required placeholder="期日延長が必要な理由を記入してください"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-action="cancel">キャンセル</button>
+        <button class="btn btn-primary" data-action="submit-extension">申請する</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/public/dashboard.js"></script>
+</body>
+</html>

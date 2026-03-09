@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Request - 社内リクエスト管理</title>
+  <link rel="stylesheet" href="/public/styles.css">
+  <style>
+    .redirect-message {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      text-align: center;
+    }
+    .message-box {
+      background: white;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-width: 500px;
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #000;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .error-box {
+      background: #fee;
+      border: 1px solid #fcc;
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 4px;
+      font-size: 14px;
+      text-align: left;
+    }
+    .link-list {
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 1px solid #e0e0e0;
+    }
+    .link-list a {
+      display: block;
+      margin: 10px 0;
+      color: #2563EB;
+      text-decoration: none;
+    }
+    .link-list a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="redirect-message">
+    <div class="message-box">
+      <h1 style="margin: 0 0 20px 0; font-size: 32px; font-weight: 300;">Request</h1>
+      <p style="color: #666; margin-bottom: 20px;">社内リクエスト管理システム</p>
+      <div class="spinner"></div>
+      <p id="status">リダイレクト中...</p>
+      
+      <div class="error-box" id="error-box" style="display: none;">
+        <strong>⚠️ サーバーに接続できません</strong>
+        <p id="error-message"></p>
+        <p style="margin-top: 10px; font-size: 12px; color: #666;">
+          GenSpark Spaceが静的サイトモードで動作している可能性があります。
+        </p>
+      </div>
+
+      <div class="link-list">
+        <p style="font-size: 14px; color: #999; margin-bottom: 15px;">直接アクセス:</p>
+        <a href="/public/login.html">→ ログイン画面</a>
+        <a href="/public/dashboard.html">→ ダッシュボード</a>
+        <a href="/public/home.html">→ ホーム（テスト）</a>
+        <a href="/public/debug-tool.html">→ デバッグツール</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // クライアントサイドルーティング
+    console.log('=== Request Management System ===');
+    console.log('Current URL:', window.location.href);
+    console.log('Pathname:', window.location.pathname);
+    console.log('Hash:', window.location.hash);
+
+    // サーバーの状態をチェック
+    async function checkServer() {
+      try {
+        const response = await fetch('/health', {
+          method: 'GET',
+          cache: 'no-cache'
+        });
+        
+        console.log('Health check response:', response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Server is running:', data);
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error('Health check failed:', error);
+        return false;
+      }
+    }
+
+    // メインロジック
+    async function initialize() {
+      const path = window.location.pathname;
+      const hash = window.location.hash;
+
+      // サーバーチェック
+      const serverRunning = await checkServer();
+      
+      if (serverRunning) {
+        console.log('✅ Server is running - using server routes');
+        document.getElementById('status').textContent = 'サーバーに接続中...';
+        
+        // サーバーが動いている場合は適切なパスにリダイレクト
+        if (path === '/' || path === '/public/' || path === '/public/index.html') {
+          window.location.href = '/app';
+        }
+      } else {
+        console.log('❌ Server is NOT running - using static mode');
+        document.getElementById('status').textContent = '静的モードで動作中';
+        
+        // エラー表示
+        const errorBox = document.getElementById('error-box');
+        const errorMessage = document.getElementById('error-message');
+        errorBox.style.display = 'block';
+        errorMessage.innerHTML = `
+          Node.jsサーバーが起動していません。<br>
+          GenSpark Spaceの設定を「Node.js Application」に変更してください。<br><br>
+          現在は静的ファイルモードで動作しています。<br>
+          下の「直接アクセス」リンクから各ページにアクセスできます。
+        `;
+
+        // 静的モードでのルーティング
+        setTimeout(() => {
+          if (path === '/' || path === '/public/' || path === '/public/index.html') {
+            // ログイン画面にリダイレクト
+            window.location.href = '/public/login.html';
+          }
+        }, 3000);
+      }
+    }
+
+    // 初期化実行
+    initialize();
+  </script>
+</body>
+</html>
