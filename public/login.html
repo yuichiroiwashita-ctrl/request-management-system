@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Request - ログイン</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <h1 class="app-name">Request</h1>
+      <p class="app-subtitle">社内リクエスト管理</p>
+      
+      <a href="/api/auth/login" class="btn-login">Talknoteでログイン</a>
+    </div>
+  </div>
+
+  <script>
+    // サーバーが動いているか確認
+    fetch('/health')
+      .then(res => res.json())
+      .then(data => {
+        console.log('Server health check:', data);
+      })
+      .catch(err => {
+        console.error('Health check failed:', err);
+      });
+  </script>
+</body>
+</html>
