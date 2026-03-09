@@ -151,14 +151,14 @@ app.get('/', (req, res) => {
   res.sendFile(publicIndexPath);
 });
 
-// アプリのメインページ（publicディレクトリのindex.html）
+// アプリのメインページ（ログイン画面）
 app.get('/app', (req, res) => {
-  const indexPath = path.join(__dirname, 'public', 'index.html');
-  console.log(`[App Route] Attempting to serve: ${indexPath}`);
-  console.log(`[App Route] File exists: ${fs.existsSync(indexPath)}`);
+  const loginPath = path.join(__dirname, 'public', 'login.html');
+  console.log(`[App Route] Attempting to serve: ${loginPath}`);
+  console.log(`[App Route] File exists: ${fs.existsSync(loginPath)}`);
 
-  if (!fs.existsSync(indexPath)) {
-    console.error(`[Error] index.html not found at: ${indexPath}`);
+  if (!fs.existsSync(loginPath)) {
+    console.error(`[Error] login.html not found at: ${loginPath}`);
 
     // デバッグ情報を含むエラーページを返す
     return res.status(500).send(`
@@ -173,9 +173,9 @@ app.get('/app', (req, res) => {
         </style>
       </head>
       <body>
-        <h1>❌ Error: index.html not found</h1>
+        <h1>❌ Error: login.html not found</h1>
         <pre>
-Expected path: ${indexPath}
+Expected path: ${loginPath}
 Working directory: ${__dirname}
 
 Directory contents:
@@ -191,8 +191,8 @@ ${fs.existsSync(path.join(__dirname, 'public')) ? `\nPublic directory contents:\
     `);
   }
 
-  console.log(`[App Route] Sending file: ${indexPath}`);
-  res.sendFile(indexPath, (err) => {
+  console.log(`[App Route] Sending file: ${loginPath}`);
+  res.sendFile(loginPath, (err) => {
     if (err) {
       console.error(`[App Route] Error sending file:`, err);
       res.status(500).send('Error loading application');
