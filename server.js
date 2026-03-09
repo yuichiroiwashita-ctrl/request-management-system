@@ -153,51 +153,71 @@ app.get('/', (req, res) => {
 
 // アプリのメインページ（ログイン画面）
 app.get('/app', (req, res) => {
-  const loginPath = path.join(__dirname, 'public', 'login.html');
-  console.log(`[App Route] Attempting to serve: ${loginPath}`);
-  console.log(`[App Route] File exists: ${fs.existsSync(loginPath)}`);
-
-  if (!fs.existsSync(loginPath)) {
-    console.error(`[Error] login.html not found at: ${loginPath}`);
-
-    // デバッグ情報を含むエラーページを返す
-    return res.status(500).send(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Error - File Not Found</title>
-        <style>
-          body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
-          h1 { color: #f48771; }
-          pre { background: #252526; padding: 15px; border-radius: 4px; }
-        </style>
-      </head>
-      <body>
-        <h1>❌ Error: login.html not found</h1>
-        <pre>
-Expected path: ${loginPath}
-Working directory: ${__dirname}
-
-Directory contents:
-${fs.readdirSync(__dirname).map(f => '  - ' + f).join('\n')}
-
-Public directory exists: ${fs.existsSync(path.join(__dirname, 'public'))}
-${fs.existsSync(path.join(__dirname, 'public')) ? `\nPublic directory contents:\n${fs.readdirSync(path.join(__dirname, 'public')).map(f => '  - ' + f).join('\n')}` : ''}
-        </pre>
-        <p><a href="/" style="color: #4ec9b0;">← Back to Home</a></p>
-        <p><a href="/debug" style="color: #4ec9b0;">→ Go to Debug Page</a></p>
-      </body>
-      </html>
-    `);
-  }
-
-  console.log(`[App Route] Sending file: ${loginPath}`);
-  res.sendFile(loginPath, (err) => {
-    if (err) {
-      console.error(`[App Route] Error sending file:`, err);
-      res.status(500).send('Error loading application');
+  // インラインでログイン画面を返す
+  res.send(`
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Request - ログイン</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
     }
-  });
+    .login-container {
+      text-align: center;
+      background: white;
+      padding: 60px 40px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-width: 400px;
+      width: 90%;
+    }
+    .app-name {
+      font-size: 48px;
+      font-weight: 300;
+      margin: 0 0 10px 0;
+      color: #000;
+    }
+    .app-subtitle {
+      font-size: 16px;
+      color: #666;
+      margin: 0 0 40px 0;
+    }
+    .btn-login {
+      display: inline-block;
+      background: #000;
+      color: white;
+      text-decoration: none;
+      padding: 14px 32px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+    .btn-login:hover {
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h1 class="app-name">Request</h1>
+    <p class="app-subtitle">社内リクエスト管理システム</p>
+    <a href="/api/auth/login" class="btn-login">Talknoteでログイン</a>
+  </div>
+</body>
+</html>
+  `);
 });
 
 // ダッシュボードパス - 認証チェック付き
@@ -297,7 +317,9 @@ app.get('/api/', async (req, res) => {
     // セッションに保存
     req.session.user = user;
 
-    res.redirect('/dashboard');
+    // カスタムドメインにリダイレクト
+    const redirectUrl = process.env.APP_URL || 'https://request.insp.co.jp';
+    res.redirect(`${redirectUrl}/dashboard`);
   } catch (error) {
     console.error('OAuth callback error:', error);
     res.redirect('/?error=auth_failed');
