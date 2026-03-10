@@ -746,9 +746,13 @@ app.get('/debug/talknote', requireAuth, (req, res) => {
         .section { margin: 30px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
         button { padding: 10px 20px; margin: 10px 5px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer; }
         button:hover { background: #357ae8; }
+        button.btn-success { background: #0f9d58; }
+        button.btn-success:hover { background: #0d8547; }
+        input { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; width: 200px; }
         pre { background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto; max-height: 400px; }
         .success { color: #0f9d58; }
         .error { color: #db4437; }
+        .info { background: #e3f2fd; padding: 15px; border-radius: 4px; margin: 15px 0; }
       </style>
     </head>
     <body>
@@ -759,21 +763,36 @@ app.get('/debug/talknote', requireAuth, (req, res) => {
         <p>現在のアクセストークン: <code>${req.session.user.access_token ? req.session.user.access_token.substring(0, 20) + '...' : '未設定'}</code></p>
       </div>
       
+      <div class="info">
+        <h3>📖 Talknote API の制限事項</h3>
+        <p>公式ドキュメント（<a href="https://developer.talknote.com/doc/" target="_blank">https://developer.talknote.com/doc/</a>）によると、以下のAPIのみ利用可能です：</p>
+        <ul>
+          <li>✅ DM（ダイレクトメッセージ）関連 API</li>
+          <li>✅ グループ（ノート）への投稿 API</li>
+          <li>❌ ユーザー一覧取得 API（存在しません）</li>
+          <li>❌ グループ一覧取得 API（存在しません）</li>
+        </ul>
+        <p><strong>グループ ID の取得方法:</strong> Talknote のグループページの URL（例: https://talknote.com/groups/12345）から <code>12345</code> を取得してください。</p>
+      </div>
+      
       <div class="section">
-        <h2>API テスト</h2>
-        <button onclick="testAPI('/users')">ユーザー一覧 (/users)</button>
-        <button onclick="testAPI('/groups')">グループ一覧 (/groups)</button>
-        <button onclick="testAPI('/me')">現在のユーザー (/me)</button>
-        <button onclick="testAPI('/users/me')">現在のユーザー (/users/me)</button>
-        <button onclick="testAPI('/user')">現在のユーザー (/user)</button>
-        <button onclick="testAPI('/account')">アカウント (/account)</button>
-        <button onclick="testAPI('/profile')">プロフィール (/profile)</button>
-        <div id="result"></div>
+        <h2>📝 DM 関連 API テスト</h2>
+        <button onclick="testAPI('/dm')">DM スレッド一覧取得</button>
+        <div id="result-dm"></div>
+      </div>
+      
+      <div class="section">
+        <h2>📝 グループ（ノート）API テスト</h2>
+        <p>グループ ID を入力してテストしてください:</p>
+        <input type="text" id="group-id" placeholder="グループID (例: 12345)">
+        <button onclick="testGroupAPI()">グループ情報取得</button>
+        <button class="btn-success" onclick="testPostToGroup()">テスト投稿（注意！）</button>
+        <div id="result-group"></div>
       </div>
       
       <script>
         async function testAPI(endpoint) {
-          const resultDiv = document.getElementById('result');
+          const resultDiv = document.getElementById('result-dm');
           resultDiv.innerHTML = '<p>🔄 テスト中...</p>';
           
           try {
@@ -783,7 +802,63 @@ app.get('/debug/talknote', requireAuth, (req, res) => {
             if (data.success) {
               resultDiv.innerHTML = '<div class="success"><h3>✅ 成功: ' + endpoint + '</h3><pre>' + JSON.stringify(data.data, null, 2) + '</pre></div>';
             } else {
-              resultDiv.innerHTML = '<div class="error"><h3>❌ 失敗: ' + endpoint + '</h3><p>ステータス: ' + data.status + '</p><pre>' + JSON.stringify(data.error, null, 2) + '</pre></div>';
+              resultDiv.innerHTML = '<div class="error"><h3>❌ 失敗: ' + endpoint + '</h3><p>' + (data.message || '不明なエラー') + '</p><pre>' + JSON.stringify(data.results || data.error, null, 2) + '</pre></div>';
+            }
+          } catch (error) {
+            resultDiv.innerHTML = '<div class="error"><h3>❌ エラー</h3><pre>' + error.toString() + '</pre></div>';
+          }
+        }
+        
+        async function testGroupAPI() {
+          const groupId = document.getElementById('group-id').value;
+          if (!groupId) {
+            alert('グループIDを入力してください');
+            return;
+          }
+          
+          const resultDiv = document.getElementById('result-group');
+          resultDiv.innerHTML = '<p>🔄 テスト中...</p>';
+          
+          try {
+            const response = await fetch('/debug/talknote/test?endpoint=' + encodeURIComponent('/group/' + groupId));
+            const data = await response.json();
+            
+            if (data.success) {
+              resultDiv.innerHTML = '<div class="success"><h3>✅ 成功: /group/' + groupId + '</h3><pre>' + JSON.stringify(data.data, null, 2) + '</pre></div>';
+            } else {
+              resultDiv.innerHTML = '<div class="error"><h3>❌ 失敗: /group/' + groupId + '</h3><p>' + (data.message || '不明なエラー') + '</p><pre>' + JSON.stringify(data.results || data.error, null, 2) + '</pre></div>';
+            }
+          } catch (error) {
+            resultDiv.innerHTML = '<div class="error"><h3>❌ エラー</h3><pre>' + error.toString() + '</pre></div>';
+          }
+        }
+        
+        async function testPostToGroup() {
+          const groupId = document.getElementById('group-id').value;
+          if (!groupId) {
+            alert('グループIDを入力してください');
+            return;
+          }
+          
+          if (!confirm('グループ ' + groupId + ' にテストメッセージを投稿しますか？\\n（実際に投稿されます！）')) {
+            return;
+          }
+          
+          const resultDiv = document.getElementById('result-group');
+          resultDiv.innerHTML = '<p>🔄 投稿中...</p>';
+          
+          try {
+            const response = await fetch('/debug/talknote/post-test', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ groupId })
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+              resultDiv.innerHTML = '<div class="success"><h3>✅ 投稿成功!</h3><pre>' + JSON.stringify(data.data, null, 2) + '</pre></div>';
+            } else {
+              resultDiv.innerHTML = '<div class="error"><h3>❌ 投稿失敗</h3><p>' + (data.message || '不明なエラー') + '</p><pre>' + JSON.stringify(data.error, null, 2) + '</pre></div>';
             }
           } catch (error) {
             resultDiv.innerHTML = '<div class="error"><h3>❌ エラー</h3><pre>' + error.toString() + '</pre></div>';
@@ -795,7 +870,54 @@ app.get('/debug/talknote', requireAuth, (req, res) => {
   `);
 });
 
-// デバッグ用: 任意のエンドポイントをテスト
+// デバッグ用: グループへのテスト投稿
+app.post('/debug/talknote/post-test', requireAuth, async (req, res) => {
+  const { groupId } = req.body;
+
+  if (!groupId) {
+    return res.status(400).json({ success: false, error: 'groupId is required' });
+  }
+
+  try {
+    const axios = require('axios');
+    const url = `https://eapi.talknote.com/api/v1/group/post/${groupId}`;
+
+    console.log(`📤 Posting test message to group ${groupId}...`);
+
+    const response = await axios({
+      method: 'POST',
+      url: url,
+      headers: {
+        'Authorization': `Bearer ${req.session.user.access_token}`,
+        'Content-Type': 'application/json'
+      },
+      data: {
+        message: '🧪 Request管理システムからのテスト投稿です。\n\nこのメッセージは Talknote API が正常に動作しているか確認するためのものです。'
+      }
+    });
+
+    console.log(`✅ Test post successful: ${response.status}`);
+
+    res.json({
+      success: true,
+      message: '投稿に成功しました！',
+      status: response.status,
+      data: response.data
+    });
+
+  } catch (error) {
+    console.error('❌ Test post failed:', error.response?.status, error.response?.data);
+
+    res.json({
+      success: false,
+      message: '投稿に失敗しました',
+      status: error.response?.status,
+      error: error.response?.data || error.message
+    });
+  }
+});
+
+// デバッグ用: 任意のエンドポイントをテスト（複数のベースURLを試す）
 app.get('/debug/talknote/test', requireAuth, async (req, res) => {
   const { endpoint } = req.query;
 
@@ -803,18 +925,80 @@ app.get('/debug/talknote/test', requireAuth, async (req, res) => {
     return res.status(400).json({ success: false, error: 'endpoint parameter is required' });
   }
 
-  try {
-    const talknoteAPI = new TalknoteAPI(req.session.user.access_token);
-    const data = await talknoteAPI.request('GET', endpoint);
-    res.json({ success: true, endpoint, data });
-  } catch (error) {
-    res.json({
-      success: false,
-      endpoint,
-      status: error.response?.status,
-      error: error.response?.data || error.message
-    });
+  // 試すベースURLのリスト
+  const baseURLs = [
+    'https://eapi.talknote.com/api/v1',
+    'https://eapi.talknote.com/api/v2',
+    'https://eapi.talknote.com/v1',
+    'https://eapi.talknote.com/v2',
+    'https://eapi.talknote.com',
+    'https://api.talknote.com/api/v1',
+    'https://api.talknote.com/api/v2',
+    'https://api.talknote.com/v1',
+    'https://api.talknote.com/v2',
+    'https://api.talknote.com'
+  ];
+
+  const results = [];
+
+  for (const baseURL of baseURLs) {
+    try {
+      const axios = require('axios');
+      const fullURL = `${baseURL}${endpoint}`;
+
+      console.log(`🔍 Trying: ${fullURL}`);
+
+      const response = await axios({
+        method: 'GET',
+        url: fullURL,
+        headers: {
+          'Authorization': `Bearer ${req.session.user.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 5000
+      });
+
+      console.log(`✅ Success: ${fullURL} (${response.status})`);
+
+      results.push({
+        baseURL,
+        fullURL,
+        success: true,
+        status: response.status,
+        data: response.data
+      });
+
+      // 成功したら即座に返す
+      return res.json({
+        success: true,
+        endpoint,
+        baseURL,
+        fullURL,
+        status: response.status,
+        data: response.data,
+        message: `✅ 成功! ベースURL: ${baseURL}`
+      });
+
+    } catch (error) {
+      console.log(`❌ Failed: ${baseURL}${endpoint} (${error.response?.status || error.code})`);
+
+      results.push({
+        baseURL,
+        fullURL: `${baseURL}${endpoint}`,
+        success: false,
+        status: error.response?.status || error.code,
+        error: error.response?.data || error.message
+      });
+    }
   }
+
+  // すべて失敗した場合
+  res.json({
+    success: false,
+    endpoint,
+    message: 'すべてのベースURLで失敗しました',
+    results
+  });
 });
 
 // ユーザー一覧取得
