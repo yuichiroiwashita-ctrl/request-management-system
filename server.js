@@ -627,6 +627,56 @@ app.get('/api/debug/sheets', async (req, res) => {
   res.json(debug);
 });
 
+// Talknote API からグループ一覧を取得するデバッグエンドポイント
+app.get('/api/debug/talknote-groups', async (req, res) => {
+  try {
+    if (!req.session || !req.session.accessToken) {
+      return res.status(401).json({ error: 'Not logged in. Please login with Talknote first.' });
+    }
+
+    const talknoteAPI = new TalknoteAPI(req.session.accessToken);
+
+    // グループ一覧取得を試みる
+    const possibleEndpoints = [
+      '/groups',
+      '/group',
+      '/group/list',
+      '/groups/list'
+    ];
+
+    const results = [];
+
+    for (const endpoint of possibleEndpoints) {
+      try {
+        console.log(`🔍 Trying endpoint: ${endpoint}`);
+        const data = await talknoteAPI.request('GET', endpoint);
+        results.push({
+          endpoint,
+          success: true,
+          data
+        });
+        console.log(`✅ Success: ${endpoint}`);
+      } catch (error) {
+        results.push({
+          endpoint,
+          success: false,
+          status: error.response?.status,
+          error: error.response?.data || error.message
+        });
+        console.log(`❌ Failed: ${endpoint} - ${error.response?.status}`);
+      }
+    }
+
+    res.json({
+      message: 'Tested multiple group endpoints',
+      access_token_present: !!req.session.accessToken,
+      results
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch groups from Talknote', details: error.message });
+  }
+});
+
 // ユーザー一覧取得（Google スプレッドシートから、またはダミーデータ）
 app.get('/api/users/list', async (req, res) => {
   try {
@@ -1141,7 +1191,14 @@ app.post('/api/requests', requireAuth, async (req, res) => {
     const requestId = await database.createRequest(request);
 
     // Talknoteに通知
+    let notificationSuccess = false;
+    let notificationError = null;
+
     try {
+      console.log('📤 Posting notification to Talknote...');
+      console.log('   Group ID:', talknote_group_id);
+      console.log('   User access token:', req.session.user.access_token ? 'Present' : 'Missing');
+
       const talknoteAPI = new TalknoteAPI(req.session.user.access_token);
       const message = `【新規リクエスト】${req.session.user.name} より\n\n` +
         `タイトル: ${title}\n` +
@@ -1149,13 +1206,29 @@ app.post('/api/requests', requireAuth, async (req, res) => {
         `期日: ${new Date(deadline).toLocaleString('ja-JP')}\n\n` +
         `内容:\n${content}`;
 
-      await talknoteAPI.postMessage(talknote_group_id, message);
+      console.log('   Message length:', message.length);
+
+      const result = await talknoteAPI.postMessage(talknote_group_id, message);
+
+      console.log('✅ Talknote notification posted successfully');
+      console.log('   Response:', result);
+      notificationSuccess = true;
     } catch (error) {
-      console.error('Talknote notification error:', error);
+      console.error('❌ Talknote notification error:', error.message);
+      console.error('   Status:', error.response?.status);
+      console.error('   Response:', error.response?.data);
+      notificationError = error.message;
       // 通知失敗してもリクエストは作成済みなのでエラーにしない
     }
 
-    res.status(201).json({ id: requestId, message: 'Request created' });
+    res.status(201).json({
+      id: requestId,
+      message: 'Request created',
+      notification: {
+        success: notificationSuccess,
+        error: notificationError
+      }
+    });
   } catch (error) {
     console.error('Request creation error:', error);
     res.status(500).json({ message: 'Failed to create request' });
