@@ -3,7 +3,7 @@ const axios = require('axios');
 class TalknoteAPI {
   constructor(accessToken) {
     this.accessToken = accessToken;
-    this.baseURL = 'https://api.talknote.com/v1';  // eapi → api に変更
+    this.baseURL = 'https://eapi.talknote.com/api/v1';  // 公式ドキュメントに従い eapi を使用
   }
 
   setAccessToken(token) {
@@ -11,51 +11,37 @@ class TalknoteAPI {
   }
 
   async request(method, endpoint, data = null) {
-    // 両方の認証ヘッダー形式を試す
-    const authHeaders = [
-      { 'Authorization': `Bearer ${this.accessToken}` },
-      { 'X-TALKNOTE-OAUTH-TOKEN': this.accessToken },
-      { 'X-Talknote-Token': this.accessToken }
-    ];
-
-    for (let i = 0; i < authHeaders.length; i++) {
-      try {
-        const config = {
-          method,
-          url: `${this.baseURL}${endpoint}`,
-          headers: {
-            ...authHeaders[i],
-            'Content-Type': 'application/json'
-          }
-        };
-
-        if (data) {
-          if (method === 'GET') {
-            config.params = data;
-          } else {
-            config.data = data;
-          }
+    try {
+      const config = {
+        method,
+        url: `${this.baseURL}${endpoint}`,
+        headers: {
+          'X-TALKNOTE-OAUTH-TOKEN': this.accessToken,  // 公式ドキュメントに従う
+          'Content-Type': 'application/json'
         }
+      };
 
-        console.log(`📡 API Request (attempt ${i + 1}): ${method} ${config.url}`);
-        console.log(`   Auth header:`, Object.keys(authHeaders[i])[0]);
-        console.log(`   Request body:`, JSON.stringify(config.data));
-
-        const response = await axios(config);
-        console.log(`✅ API Response: ${response.status}`);
-        return response.data;
-      } catch (error) {
-        console.log(`❌ Attempt ${i + 1} failed with ${Object.keys(authHeaders[i])[0]}: ${error.response?.status}`);
-        if (error.response?.data) {
-          console.log(`   Error data:`, error.response.data);
-        }
-
-        // 最後の試行でもエラーの場合のみスロー
-        if (i === authHeaders.length - 1) {
-          console.error(`❌ All auth header formats failed for: ${method} ${this.baseURL}${endpoint}`);
-          throw error;
+      if (data) {
+        if (method === 'GET') {
+          config.params = data;
+        } else {
+          config.data = data;
         }
       }
+
+      console.log(`📡 API Request: ${method} ${config.url}`);
+      console.log(`   Auth header: X-TALKNOTE-OAUTH-TOKEN`);
+      console.log(`   Request body:`, JSON.stringify(config.data));
+
+      const response = await axios(config);
+      console.log(`✅ API Response: ${response.status}`);
+      console.log(`   Response data:`, JSON.stringify(response.data));
+      return response.data;
+    } catch (error) {
+      console.error(`❌ API Request failed: ${method} ${this.baseURL}${endpoint}`);
+      console.error(`   Status: ${error.response?.status}`);
+      console.error(`   Error data:`, error.response?.data);
+      throw error;
     }
   }
 
