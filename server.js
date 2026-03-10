@@ -456,24 +456,40 @@ app.get('/api/', async (req, res) => {
     // アクセストークンを取得
     const tokenData = await talknoteOAuth.exchangeCodeForToken(code);
     console.log('✅ Token received:', tokenData.access_token ? 'Yes' : 'No');
+    console.log('   Token type:', typeof tokenData.access_token);
+    console.log('   Token length:', tokenData.access_token?.length);
+    console.log('   Token (first 20 chars):', tokenData.access_token?.substring(0, 20) + '...');
+    console.log('   Full token data keys:', Object.keys(tokenData));
 
-    console.log('🔄 Fetching user data...');
-    // Talknote APIでユーザー情報を取得
-    const talknoteAPI = new TalknoteAPI(tokenData.access_token);
-    const userData = await talknoteAPI.getCurrentUser();
-    console.log('✅ User data:', userData);
+    let userData = null;
+
+    // ユーザー情報取得を試みる（失敗しても続行）
+    try {
+      console.log('🔄 Attempting to fetch user data...');
+      const talknoteAPI = new TalknoteAPI(tokenData.access_token);
+      userData = await talknoteAPI.getCurrentUser();
+      console.log('✅ User data retrieved:', userData);
+    } catch (userError) {
+      console.warn('⚠️  Could not fetch user data from Talknote API');
+      console.warn('   This is expected if the API endpoints are not documented');
+      console.warn('   Continuing with token-only authentication...');
+      userData = null;
+    }
 
     // ユーザー情報をDBに保存
     const user = {
-      id: userData.id || userData.user_id || String(Date.now()),
-      name: userData.name || userData.username || 'Unknown User',
-      email: userData.email || '',
-      avatar_url: userData.avatar_url || userData.avatar || '',
+      id: userData?.id || userData?.user_id || `talknote_${Date.now()}`,
+      name: userData?.name || userData?.username || 'Talknote User',
+      email: userData?.email || '',
+      avatar_url: userData?.avatar_url || userData?.avatar || '',
       access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token
+      refresh_token: tokenData.refresh_token || ''
     };
 
     console.log('💾 Saving user to database...');
+    console.log('   User ID:', user.id);
+    console.log('   User name:', user.name);
+    console.log('   Has access token:', !!user.access_token);
     await database.saveUser(user);
     console.log('✅ User saved');
 
