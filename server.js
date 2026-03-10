@@ -174,7 +174,7 @@ app.get('/app', (req, res) => {
     return res.sendFile(loginPath);
   }
   
-  // フォールバック: インラインでログイン画面を返す
+  // フォールバック: インラインで簡易ログイン画面を返す
   res.send(`
 <!DOCTYPE html>
 <html lang="ja">
@@ -195,7 +195,6 @@ app.get('/app', (req, res) => {
       min-height: 100vh;
     }
     .login-container {
-      text-align: center;
       background: white;
       padding: 60px 40px;
       border-radius: 8px;
@@ -208,25 +207,61 @@ app.get('/app', (req, res) => {
       font-weight: 300;
       margin: 0 0 10px 0;
       color: #000;
+      text-align: center;
     }
     .app-subtitle {
       font-size: 16px;
       color: #666;
       margin: 0 0 40px 0;
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    .form-select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 16px;
+      background: white;
+      cursor: pointer;
+    }
+    .form-select:focus {
+      outline: none;
+      border-color: #2563EB;
     }
     .btn-login {
-      display: inline-block;
+      width: 100%;
       background: #000;
       color: white;
-      text-decoration: none;
-      padding: 14px 32px;
+      border: none;
+      padding: 14px;
       border-radius: 6px;
       font-size: 16px;
       font-weight: 500;
+      cursor: pointer;
       transition: opacity 0.2s;
     }
     .btn-login:hover {
       opacity: 0.8;
+    }
+    .btn-login:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .error-message {
+      color: #ef4444;
+      font-size: 14px;
+      margin-top: 10px;
+      text-align: center;
     }
   </style>
 </head>
@@ -234,8 +269,85 @@ app.get('/app', (req, res) => {
   <div class="login-container">
     <h1 class="app-name">Request</h1>
     <p class="app-subtitle">社内リクエスト管理システム</p>
-    <a href="/api/auth/login" class="btn-login">Talknoteでログイン</a>
+    
+    <form id="loginForm">
+      <div class="form-group">
+        <label class="form-label" for="userSelect">ユーザーを選択</label>
+        <select id="userSelect" class="form-select" required>
+          <option value="">読み込み中...</option>
+        </select>
+      </div>
+      
+      <button type="submit" class="btn-login" id="loginButton" disabled>ログイン</button>
+      
+      <div id="errorMessage" class="error-message" style="display: none;"></div>
+    </form>
   </div>
+
+  <script>
+    const API_BASE = '';
+    
+    // ユーザー一覧を読み込み
+    async function loadUsers() {
+      try {
+        const response = await fetch(API_BASE + '/api/users/list');
+        const users = await response.json();
+        
+        const select = document.getElementById('userSelect');
+        select.innerHTML = '<option value="">ユーザーを選択してください</option>';
+        
+        users.forEach(user => {
+          const option = document.createElement('option');
+          option.value = user.id;
+          option.textContent = user.name + ' (' + user.email + ')';
+          select.appendChild(option);
+        });
+        
+        document.getElementById('loginButton').disabled = false;
+      } catch (error) {
+        console.error('Failed to load users:', error);
+        document.getElementById('userSelect').innerHTML = '<option value="">エラー: ユーザーを読み込めませんでした</option>';
+      }
+    }
+    
+    // ログイン処理
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const userId = document.getElementById('userSelect').value;
+      if (!userId) return;
+      
+      const button = document.getElementById('loginButton');
+      const errorDiv = document.getElementById('errorMessage');
+      
+      button.disabled = true;
+      button.textContent = 'ログイン中...';
+      errorDiv.style.display = 'none';
+      
+      try {
+        const response = await fetch(API_BASE + '/api/auth/simple-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: userId })
+        });
+        
+        if (response.ok) {
+          window.location.href = '/dashboard';
+        } else {
+          throw new Error('ログインに失敗しました');
+        }
+      } catch (error) {
+        console.error('Login failed:', error);
+        errorDiv.textContent = error.message;
+        errorDiv.style.display = 'block';
+        button.disabled = false;
+        button.textContent = 'ログイン';
+      }
+    });
+    
+    // 初期化
+    loadUsers();
+  </script>
 </body>
 </html>
   `);
