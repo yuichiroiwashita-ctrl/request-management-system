@@ -731,6 +731,92 @@ app.post('/api/auth/simple-login', async (req, res) => {
 // Talknote APIエンドポイント
 // ========================================
 
+// Talknote API エンドポイントをテストするデバッグページ
+app.get('/debug/talknote', requireAuth, (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Talknote API デバッグ</title>
+      <style>
+        body { font-family: sans-serif; max-width: 1200px; margin: 50px auto; padding: 20px; }
+        h1 { color: #4285f4; }
+        .section { margin: 30px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        button { padding: 10px 20px; margin: 10px 5px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #357ae8; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto; max-height: 400px; }
+        .success { color: #0f9d58; }
+        .error { color: #db4437; }
+      </style>
+    </head>
+    <body>
+      <h1>🧪 Talknote API デバッグツール</h1>
+      
+      <div class="section">
+        <h2>アクセストークン</h2>
+        <p>現在のアクセストークン: <code>${req.session.user.access_token ? req.session.user.access_token.substring(0, 20) + '...' : '未設定'}</code></p>
+      </div>
+      
+      <div class="section">
+        <h2>API テスト</h2>
+        <button onclick="testAPI('/users')">ユーザー一覧 (/users)</button>
+        <button onclick="testAPI('/groups')">グループ一覧 (/groups)</button>
+        <button onclick="testAPI('/me')">現在のユーザー (/me)</button>
+        <button onclick="testAPI('/users/me')">現在のユーザー (/users/me)</button>
+        <button onclick="testAPI('/user')">現在のユーザー (/user)</button>
+        <button onclick="testAPI('/account')">アカウント (/account)</button>
+        <button onclick="testAPI('/profile')">プロフィール (/profile)</button>
+        <div id="result"></div>
+      </div>
+      
+      <script>
+        async function testAPI(endpoint) {
+          const resultDiv = document.getElementById('result');
+          resultDiv.innerHTML = '<p>🔄 テスト中...</p>';
+          
+          try {
+            const response = await fetch('/debug/talknote/test?endpoint=' + encodeURIComponent(endpoint));
+            const data = await response.json();
+            
+            if (data.success) {
+              resultDiv.innerHTML = '<div class="success"><h3>✅ 成功: ' + endpoint + '</h3><pre>' + JSON.stringify(data.data, null, 2) + '</pre></div>';
+            } else {
+              resultDiv.innerHTML = '<div class="error"><h3>❌ 失敗: ' + endpoint + '</h3><p>ステータス: ' + data.status + '</p><pre>' + JSON.stringify(data.error, null, 2) + '</pre></div>';
+            }
+          } catch (error) {
+            resultDiv.innerHTML = '<div class="error"><h3>❌ エラー</h3><pre>' + error.toString() + '</pre></div>';
+          }
+        }
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+// デバッグ用: 任意のエンドポイントをテスト
+app.get('/debug/talknote/test', requireAuth, async (req, res) => {
+  const { endpoint } = req.query;
+
+  if (!endpoint) {
+    return res.status(400).json({ success: false, error: 'endpoint parameter is required' });
+  }
+
+  try {
+    const talknoteAPI = new TalknoteAPI(req.session.user.access_token);
+    const data = await talknoteAPI.request('GET', endpoint);
+    res.json({ success: true, endpoint, data });
+  } catch (error) {
+    res.json({
+      success: false,
+      endpoint,
+      status: error.response?.status,
+      error: error.response?.data || error.message
+    });
+  }
+});
+
 // ユーザー一覧取得
 app.get('/api/talknote/users', requireAuth, async (req, res) => {
   try {
