@@ -3,7 +3,7 @@ const axios = require('axios');
 class TalknoteAPI {
   constructor(accessToken) {
     this.accessToken = accessToken;
-    this.baseURL = 'https://eapi.talknote.com/api/v1';
+    this.baseURL = 'https://api.talknote.com/v1';  // eapi → api に変更
   }
 
   setAccessToken(token) {
@@ -113,11 +113,15 @@ class TalknoteAPI {
   async postMessage(groupId, message) {
     console.log(`📤 postMessage called`);
     console.log(`   Group ID: ${groupId}`);
-    console.log(`   Message: ${message.substring(0, 50)}...`);
+    console.log(`   Message length: ${message?.length || 0}`);
 
-    // まず大文字の Message を試す（エラーメッセージから推測）
-    const payload = { Message: message };
-    console.log(`   Payload:`, JSON.stringify(payload));
+    if (!message) {
+      throw new Error('Message is empty or undefined');
+    }
+
+    // api.talknote.com では message フィールド（小文字）を使用
+    const payload = { message: message };
+    console.log(`   Payload preview:`, JSON.stringify(payload).substring(0, 100));
 
     return await this.request('POST', `/group/post/${groupId}`, payload);
   }
