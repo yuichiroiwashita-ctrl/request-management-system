@@ -17,7 +17,7 @@ class GoogleSheetsService {
   // ユーザー一覧を取得
   async getUsers() {
     if (!this.doc) await this.init();
-    
+
     // 複数のシート名をサポート
     const sheet = this.doc.sheetsByTitle['メンバー一覧'] || this.doc.sheetsByTitle['ユーザー情報'];
     if (!sheet) {
@@ -25,7 +25,7 @@ class GoogleSheetsService {
     }
 
     const rows = await sheet.getRows();
-    
+
     return rows.map((row, index) => ({
       id: String(index + 1), // 連番でIDを生成
       talknote_user_id: row.get('user_id'), // Talknote のユーザーID
@@ -51,14 +51,14 @@ class GoogleSheetsService {
   // グループ一覧を取得
   async getGroups() {
     if (!this.doc) await this.init();
-    
+
     const sheet = this.doc.sheetsByTitle['グループ一覧'];
     if (!sheet) {
       throw new Error('Sheet "グループ一覧" not found');
     }
 
     const rows = await sheet.getRows();
-    
+
     return rows.map(row => ({
       id: row.get('group_id'), // Talknote のグループID
       name: row.get('グループ名'),

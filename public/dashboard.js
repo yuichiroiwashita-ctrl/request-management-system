@@ -70,19 +70,29 @@ async function loadRequests() {
 
 async function loadUsers() {
   try {
-    const response = await fetch('/api/talknote/users');
+    const response = await fetch('/api/users/list');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
     state.users = await response.json();
+    console.log('✅ Users loaded:', state.users.length);
   } catch (error) {
     console.error('Users load error:', error);
+    state.users = []; // エラー時は空配列
   }
 }
 
 async function loadGroups() {
   try {
-    const response = await fetch('/api/talknote/groups');
+    const response = await fetch('/api/groups/list');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
     state.groups = await response.json();
+    console.log('✅ Groups loaded:', state.groups.length);
   } catch (error) {
     console.error('Groups load error:', error);
+    state.groups = []; // エラー時は空配列
   }
 }
 
@@ -206,7 +216,7 @@ function renderRequests() {
     const statusBadge = getStatusBadge(request);
     const extensionBadge = getExtensionBadge(request);
     const actions = getRequestActions(request);
-    
+
     return `
       <div class="request-card" data-request-id="${request.id}">
         <div class="request-card-header">
@@ -240,7 +250,7 @@ function renderRequests() {
       e.stopPropagation();
       const action = btn.dataset.action;
       const requestId = parseInt(btn.dataset.requestId);
-      
+
       if (action === 'request-extension') {
         openExtensionRequestModal(requestId);
       } else if (action === 'approve-extension' || action === 'reject-extension') {
@@ -263,13 +273,13 @@ function getStatusBadge(request) {
 
 function getExtensionBadge(request) {
   if (!request.extension_status) return '';
-  
+
   const extensionMap = {
     requested: { class: 'badge-extension-requested', text: '延長申請中' },
     approved: { class: 'badge-extension-approved', text: '延長承認' },
     rejected: { class: 'badge-extension-rejected', text: '延長却下' }
   };
-  
+
   const ext = extensionMap[request.extension_status];
   return ext ? `<span class="badge ${ext.class}">${ext.text}</span>` : '';
 }
@@ -284,8 +294,8 @@ function getRequestActions(request) {
   let actions = [];
 
   // 期日延長申請ボタン（受信者、承認済み、期日前、未完了、延長申請中でない）
-  if (isRecipient && request.status === 'accepted' && isBeforeDeadline && 
-      (!request.extension_status || request.extension_status === 'rejected')) {
+  if (isRecipient && request.status === 'accepted' && isBeforeDeadline &&
+    (!request.extension_status || request.extension_status === 'rejected')) {
     actions.push(`
       <button class="btn btn-sm btn-secondary" data-action="request-extension" data-request-id="${request.id}">
         期日延長を申請
@@ -326,7 +336,7 @@ function openCreateRequestModal() {
   // グループリストを設定
   const groupSelect = document.getElementById('request-group');
   groupSelect.innerHTML = '<option value="">選択してください</option>' +
-    state.groups.map(group => 
+    state.groups.map(group =>
       `<option value="${group.id}" data-name="${escapeHtml(group.name)}">${escapeHtml(group.name)}</option>`
     ).join('');
 
@@ -345,7 +355,7 @@ async function submitCreateRequest() {
 
   const recipientSelect = document.getElementById('request-recipient');
   const groupSelect = document.getElementById('request-group');
-  
+
   const data = {
     title: document.getElementById('request-title').value,
     content: document.getElementById('request-content').value,
@@ -576,7 +586,7 @@ async function openRequestDetailModal(requestId) {
 // 回答処理
 // ========================================
 
-window.submitResponse = async function() {
+window.submitResponse = async function () {
   const selectedType = document.querySelector('input[name="response-type"]:checked');
   if (!selectedType) {
     alert('回答を選択してください');
@@ -621,7 +631,7 @@ window.submitResponse = async function() {
 // 完了報告処理
 // ========================================
 
-window.submitCompletion = async function() {
+window.submitCompletion = async function () {
   const report = document.getElementById('completion-report').value;
   if (!report) {
     alert('報告内容を入力してください');
@@ -731,7 +741,7 @@ async function handleExtensionResponse(requestId, action) {
     const extResponse = await fetch(`/api/requests/${requestId}/extensions`);
     const extensions = await extResponse.json();
     const pendingExtension = extensions.find(ext => ext.status === 'pending');
-    
+
     if (!pendingExtension) {
       alert('延長申請が見つかりません');
       return;
@@ -760,7 +770,7 @@ async function handleExtensionResponse(requestId, action) {
   }
 }
 
-window.respondToExtension = async function(extensionId, action) {
+window.respondToExtension = async function (extensionId, action) {
   const actionText = action === 'approve' ? '承認' : '却下';
   if (!confirm(`本当に延長申請を${actionText}しますか？`)) {
     return;
@@ -813,9 +823,9 @@ function formatDate(dateString) {
 function formatDateTime(dateString) {
   if (!dateString) return '-';
   const date = new Date(dateString);
-  return date.toLocaleDateString('ja-JP', { 
-    year: 'numeric', 
-    month: '2-digit', 
+  return date.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit'
