@@ -9,9 +9,23 @@ class GoogleSheetsService {
 
   // 初期化（公開シートの場合は認証不要）
   async init() {
-    this.doc = new GoogleSpreadsheet(this.spreadsheetId);
-    await this.doc.loadInfo();
-    console.log('📊 Google Spreadsheet loaded:', this.doc.title);
+    try {
+      this.doc = new GoogleSpreadsheet(this.spreadsheetId);
+
+      // 公開スプレッドシートとしてアクセス（認証なし）
+      await this.doc.loadInfo();
+
+      console.log('📊 Google Spreadsheet loaded:', this.doc.title);
+      console.log('   Spreadsheet ID:', this.spreadsheetId);
+      console.log('   Sheets:', Object.keys(this.doc.sheetsByTitle).join(', '));
+
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to load Google Spreadsheet:', error.message);
+      console.error('   Spreadsheet ID:', this.spreadsheetId);
+      console.error('   Make sure the spreadsheet is publicly accessible (Anyone with the link can view)');
+      throw error;
+    }
   }
 
   // ユーザー一覧を取得

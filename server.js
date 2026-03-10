@@ -14,12 +14,18 @@ let sheetsService = null;
 try {
   GoogleSheetsService = require('./google-sheets-service');
   const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID || '';
-  sheetsService = SPREADSHEET_ID ? new GoogleSheetsService(SPREADSHEET_ID) : null;
-  if (sheetsService) {
+
+  if (SPREADSHEET_ID) {
+    sheetsService = new GoogleSheetsService(SPREADSHEET_ID);
     console.log('✅ Google Sheets integration enabled');
+    console.log('   📊 Spreadsheet ID:', SPREADSHEET_ID);
+  } else {
+    console.log('⚠️  Google Sheets integration disabled (GOOGLE_SPREADSHEET_ID not set)');
   }
 } catch (error) {
+  console.error('❌ Failed to load Google Sheets Service:', error.message);
   console.log('⚠️  Google Sheets integration disabled (optional feature)');
+  sheetsService = null;
 }
 
 const app = express();
@@ -569,6 +575,57 @@ app.get('/admin/tokens', (req, res) => {
 // ========================================
 // 簡易ログイン（Google スプレッドシート連携用）
 // ========================================
+
+// Google Sheets 接続状況デバッグ
+app.get('/api/debug/sheets', async (req, res) => {
+  const debug = {
+    spreadsheet_id_set: !!process.env.GOOGLE_SPREADSHEET_ID,
+    spreadsheet_id: process.env.GOOGLE_SPREADSHEET_ID || null,
+    sheets_service_initialized: !!sheetsService,
+    timestamp: new Date().toISOString()
+  };
+
+  if (sheetsService) {
+    try {
+      // まず初期化を試みる
+      if (!sheetsService.doc) {
+        await sheetsService.init();
+      }
+
+      debug.spreadsheet_title = sheetsService.doc?.title;
+      debug.available_sheets = sheetsService.doc ? Object.keys(sheetsService.doc.sheetsByTitle) : [];
+
+      // ユーザー取得
+      try {
+        const users = await sheetsService.getUsers();
+        debug.users_count = users.length;
+        debug.users_sample = users.slice(0, 3);
+        debug.users_fetch_success = true;
+      } catch (error) {
+        debug.users_fetch_success = false;
+        debug.users_error = error.message;
+      }
+
+      // グループ取得
+      try {
+        const groups = await sheetsService.getGroups();
+        debug.groups_count = groups.length;
+        debug.groups_sample = groups.slice(0, 3);
+        debug.groups_fetch_success = true;
+      } catch (error) {
+        debug.groups_fetch_success = false;
+        debug.groups_error = error.message;
+      }
+    } catch (error) {
+      debug.init_error = error.message;
+      debug.init_success = false;
+    }
+  } else {
+    debug.error = 'Google Sheets Service not initialized';
+  }
+
+  res.json(debug);
+});
 
 // ユーザー一覧取得（Google スプレッドシートから、またはダミーデータ）
 app.get('/api/users/list', async (req, res) => {
