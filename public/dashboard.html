@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Request - ダッシュボード</title>
   <link rel="stylesheet" href="/public/styles.css">
 </head>
+
 <body>
   <!-- ヘッダー -->
   <header class="header">
     <div class="header-brand">Request</div>
     <div class="header-user">
       <span class="header-username" id="username">読み込み中...</span>
+      <a href="/debug/talknote" class="header-link" title="Talknote API エンドポイントをテスト">🧪 デバッグ</a>
       <a href="/admin/tokens" class="header-link" title="Google Apps Script用のアクセストークンを取得">🔑 トークン管理</a>
       <a href="/api/auth/logout" class="header-link">ログアウト</a>
     </div>
@@ -137,4 +140,5 @@
 
   <script src="/public/dashboard.js"></script>
 </body>
+
 </html>
