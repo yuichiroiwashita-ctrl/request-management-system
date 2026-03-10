@@ -84,7 +84,18 @@ class Database {
         INSERT OR REPLACE INTO users (id, name, email, avatar_url, access_token, refresh_token, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
       `;
-      this.db.run(sql, [user.id, user.name, user.email, user.avatar_url, user.access_token, user.refresh_token], function(err) {
+
+      // null を空文字列に変換（NOT NULL 制約対策）
+      const params = [
+        user.id,
+        user.name,
+        user.email,
+        user.avatar_url || '',
+        user.access_token || '',
+        user.refresh_token || ''
+      ];
+
+      this.db.run(sql, params, function (err) {
         if (err) reject(err);
         else resolve(user);
       });
@@ -119,7 +130,7 @@ class Database {
         request.recipient_name,
         request.talknote_group_id,
         request.talknote_group_name
-      ], function(err) {
+      ], function (err) {
         if (err) reject(err);
         else resolve(this.lastID);
       });
@@ -156,7 +167,7 @@ class Database {
         SET status = ?, response_type = ?, response_condition = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `;
-      this.db.run(sql, [status, responseData.response_type, responseData.response_condition, requestId], function(err) {
+      this.db.run(sql, [status, responseData.response_type, responseData.response_condition, requestId], function (err) {
         if (err) reject(err);
         else resolve(this.changes);
       });
@@ -182,7 +193,7 @@ class Database {
         completionData.completed_at,
         deadlineMet,
         requestId
-      ], function(err) {
+      ], function (err) {
         if (err) reject(err);
         else resolve(this.changes);
       });
@@ -201,7 +212,7 @@ class Database {
         extensionData.requester_id,
         extensionData.new_deadline,
         extensionData.reason
-      ], function(err) {
+      ], function (err) {
         if (err) reject(err);
         else {
           // リクエストのextension_statusを更新
@@ -263,14 +274,14 @@ class Database {
 
         const status = action === 'approve' ? 'approved' : 'rejected';
         const extensionStatus = action === 'approve' ? 'approved' : 'rejected';
-        
+
         // 延長申請のステータスを更新
         const updateExtensionSql = `
           UPDATE extension_requests 
           SET status = ?, responded_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `;
-        
+
         this.db.run(updateExtensionSql, [status, extensionId], (err) => {
           if (err) {
             reject(err);
@@ -280,7 +291,7 @@ class Database {
           // リクエストのextension_statusを更新し、承認の場合はdeadlineも更新
           let updateRequestSql;
           let params;
-          
+
           if (action === 'approve') {
             updateRequestSql = `
               UPDATE requests 
@@ -296,8 +307,8 @@ class Database {
             `;
             params = [extensionStatus, extension.request_id];
           }
-          
-          this.db.run(updateRequestSql, params, function(err) {
+
+          this.db.run(updateRequestSql, params, function (err) {
             if (err) reject(err);
             else resolve({ extension, changes: this.changes });
           });

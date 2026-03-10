@@ -647,9 +647,9 @@ app.post('/api/auth/simple-login', async (req, res) => {
       name: user.name,
       email: user.email,
       avatar_url: '',
-      access_token: null,
-      refresh_token: null,
-      talknote_user_id: user.talknote_user_id
+      access_token: '',  // 空文字列（nullではなく）
+      refresh_token: '',  // 空文字列（nullではなく）
+      talknote_user_id: user.talknote_user_id || ''
     };
 
     // DBに保存
