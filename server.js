@@ -59,7 +59,7 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
   resave: false,
   saveUninitialized: false,
-  cookie: { 
+  cookie: {
     maxAge: 24 * 60 * 60 * 1000, // 24時間
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production' // 本番環境ではHTTPS必須
@@ -89,7 +89,7 @@ const storage = multer.diskStorage({
     cb(null, uniqueSuffix + '-' + file.originalname);
   }
 });
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
@@ -120,8 +120,8 @@ app.use((req, res, next) => {
 
 // ヘルスチェック用エンドポイント
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV,
@@ -146,11 +146,11 @@ app.get('/', (req, res) => {
     console.log(`[Root Route] Serving root index.html from: ${rootIndexPath}`);
     return res.sendFile(rootIndexPath);
   }
-  
+
   // 2. publicディレクトリのindex.html
   const publicIndexPath = path.join(__dirname, 'public', 'index.html');
   console.log(`[Root Route] Serving public index.html from: ${publicIndexPath}`);
-  
+
   // ファイルの存在確認
   if (!fs.existsSync(publicIndexPath)) {
     console.error(`[Error] index.html not found at: ${publicIndexPath}`);
@@ -162,18 +162,18 @@ app.get('/', (req, res) => {
       <p>Files in directory: ${fs.readdirSync(__dirname).join(', ')}</p>
     `);
   }
-  
+
   res.sendFile(publicIndexPath);
 });
 
 // アプリのメインページ（簡易ログイン画面）
 app.get('/app', (req, res) => {
   const loginPath = path.join(__dirname, 'public', 'login-simple.html');
-  
+
   if (fs.existsSync(loginPath)) {
     return res.sendFile(loginPath);
   }
-  
+
   // フォールバック: インラインで簡易ログイン画面を返す
   res.send(`
 <!DOCTYPE html>
@@ -356,20 +356,20 @@ app.get('/app', (req, res) => {
 // ダッシュボードパス - 認証チェック付き
 app.get('/dashboard', (req, res) => {
   console.log(`[Dashboard] Access attempt - Session exists: ${!!req.session}, User exists: ${!!req.session?.user}`);
-  
+
   if (!req.session || !req.session.user) {
     console.log('[Dashboard] Unauthorized access, redirecting to /app');
     return res.redirect('/app');
   }
-  
+
   const dashboardPath = path.join(__dirname, 'public', 'dashboard.html');
   console.log(`[Dashboard Route] Attempting to serve: ${dashboardPath}`);
   console.log(`[Dashboard Route] File exists: ${fs.existsSync(dashboardPath)}`);
-  
+
   // ファイルの存在確認
   if (!fs.existsSync(dashboardPath)) {
     console.error(`[Error] dashboard.html not found at: ${dashboardPath}`);
-    
+
     return res.status(500).send(`
       <!DOCTYPE html>
       <html>
@@ -399,7 +399,7 @@ ${fs.existsSync(path.join(__dirname, 'public')) ? `\nPublic directory contents:\
       </html>
     `);
   }
-  
+
   console.log(`[Dashboard Route] Sending file: ${dashboardPath}`);
   res.sendFile(dashboardPath, (err) => {
     if (err) {
@@ -422,7 +422,7 @@ app.get('/api/auth/login', (req, res) => {
 // OAuth コールバック（Talknote が /api/ にリダイレクトする場合に対応）
 app.get('/api/', async (req, res) => {
   const { code } = req.query;
-  
+
   if (!code) {
     return res.redirect('/?error=no_code');
   }
@@ -430,11 +430,11 @@ app.get('/api/', async (req, res) => {
   try {
     // アクセストークンを取得
     const tokenData = await talknoteOAuth.exchangeCodeForToken(code);
-    
+
     // Talknote APIでユーザー情報を取得
     const talknoteAPI = new TalknoteAPI(tokenData.access_token);
     const userData = await talknoteAPI.getCurrentUser();
-    
+
     // ユーザー情報をDBに保存
     const user = {
       id: userData.id || userData.user_id || String(Date.now()),
@@ -444,12 +444,12 @@ app.get('/api/', async (req, res) => {
       access_token: tokenData.access_token,
       refresh_token: tokenData.refresh_token
     };
-    
+
     await database.saveUser(user);
-    
+
     // セッションに保存
     req.session.user = user;
-    
+
     res.redirect('/dashboard');
   } catch (error) {
     console.error('OAuth callback error:', error);
@@ -477,7 +477,7 @@ app.get('/api/user', requireAuth, (req, res) => {
 app.get('/api/admin/tokens', requireAuth, async (req, res) => {
   try {
     const user = req.session.user;
-    
+
     if (!user) {
       return res.status(401).json({ error: 'ログインが必要です' });
     }
@@ -518,7 +518,7 @@ app.get('/api/users/list', async (req, res) => {
         console.error('Failed to fetch from Google Sheets, falling back to dummy data:', error);
       }
     }
-    
+
     // フォールバック: ダミーデータ
     console.log('⚠️  Using dummy user data (Google Sheets not configured)');
     res.json([
@@ -565,7 +565,7 @@ app.get('/api/groups/list', async (req, res) => {
         console.error('Failed to fetch from Google Sheets, falling back to dummy data:', error);
       }
     }
-    
+
     // フォールバック: ダミーデータ
     console.log('⚠️  Using dummy group data (Google Sheets not configured)');
     res.json([
@@ -600,21 +600,21 @@ app.get('/api/groups/list', async (req, res) => {
 // 簡易ログイン
 app.post('/api/auth/simple-login', async (req, res) => {
   const { userId } = req.body;
-  
+
   if (!userId) {
     return res.status(400).json({ error: 'User ID is required' });
   }
-  
+
   try {
     let user;
-    
+
     // ダミーユーザーデータを定義
     const dummyUsers = {
       '1': { id: '1', name: '岩下雄一郎', email: 'yuichiro@insp.co.jp', department: '開発部', talknote_user_id: 'user001' },
       '2': { id: '2', name: '山田太郎', email: 'yamada@insp.co.jp', department: '営業部', talknote_user_id: 'user002' },
       '3': { id: '3', name: '佐藤花子', email: 'sato@insp.co.jp', department: '総務部', talknote_user_id: 'user003' }
     };
-    
+
     // Google Sheets から取得を試みる
     if (sheetsService) {
       try {
@@ -627,7 +627,7 @@ app.post('/api/auth/simple-login', async (req, res) => {
         // フォールバックへ続行
       }
     }
-    
+
     // Google Sheets から取得できなかった場合、ダミーデータを使用
     if (!user) {
       user = dummyUsers[userId];
@@ -635,12 +635,12 @@ app.post('/api/auth/simple-login', async (req, res) => {
         console.log(`⚠️  Using dummy user data: ${user.name}`);
       }
     }
-    
+
     // ユーザーが見つからない場合
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     // セッションに保存
     req.session.user = {
       id: user.id,
@@ -651,10 +651,10 @@ app.post('/api/auth/simple-login', async (req, res) => {
       refresh_token: null,
       talknote_user_id: user.talknote_user_id
     };
-    
+
     // DBに保存
     await database.saveUser(req.session.user);
-    
+
     console.log(`✅ Login successful: ${user.name} (${user.email})`);
     res.json({ success: true, user: req.session.user });
   } catch (error) {
@@ -713,12 +713,12 @@ app.get('/api/requests/:id', requireAuth, async (req, res) => {
     if (!request) {
       return res.status(404).json({ message: 'Request not found' });
     }
-    
+
     // 権限チェック
     if (request.sender_id !== req.session.user.id && request.recipient_id !== req.session.user.id) {
       return res.status(403).json({ message: 'Forbidden' });
     }
-    
+
     res.json(request);
   } catch (error) {
     console.error('Request fetch error:', error);
@@ -730,11 +730,11 @@ app.get('/api/requests/:id', requireAuth, async (req, res) => {
 app.post('/api/requests', requireAuth, async (req, res) => {
   try {
     const { title, content, deadline, recipient_id, recipient_name, talknote_group_id, talknote_group_name } = req.body;
-    
+
     if (!title || !content || !deadline || !recipient_id || !talknote_group_id) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
-    
+
     const request = {
       title,
       content,
@@ -746,24 +746,24 @@ app.post('/api/requests', requireAuth, async (req, res) => {
       talknote_group_id,
       talknote_group_name
     };
-    
+
     const requestId = await database.createRequest(request);
-    
+
     // Talknoteに通知
     try {
       const talknoteAPI = new TalknoteAPI(req.session.user.access_token);
       const message = `【新規リクエスト】${req.session.user.name} より\n\n` +
-                      `タイトル: ${title}\n` +
-                      `宛先: ${recipient_name}\n` +
-                      `期日: ${new Date(deadline).toLocaleString('ja-JP')}\n\n` +
-                      `内容:\n${content}`;
-      
+        `タイトル: ${title}\n` +
+        `宛先: ${recipient_name}\n` +
+        `期日: ${new Date(deadline).toLocaleString('ja-JP')}\n\n` +
+        `内容:\n${content}`;
+
       await talknoteAPI.postMessage(talknote_group_id, message);
     } catch (error) {
       console.error('Talknote notification error:', error);
       // 通知失敗してもリクエストは作成済みなのでエラーにしない
     }
-    
+
     res.status(201).json({ id: requestId, message: 'Request created' });
   } catch (error) {
     console.error('Request creation error:', error);
@@ -778,20 +778,20 @@ app.put('/api/requests/:id/respond', requireAuth, async (req, res) => {
     if (!request) {
       return res.status(404).json({ message: 'Request not found' });
     }
-    
+
     // 受信者のみが回答可能
     if (request.recipient_id !== req.session.user.id) {
       return res.status(403).json({ message: 'Forbidden' });
     }
-    
+
     const { status, response_type, response_condition } = req.body;
-    
+
     if (!status || !response_type) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
-    
+
     await database.updateRequestStatus(req.params.id, status, { response_type, response_condition });
-    
+
     // Talknoteに通知
     try {
       const talknoteAPI = new TalknoteAPI(req.session.user.access_token);
@@ -800,20 +800,20 @@ app.put('/api/requests/:id/respond', requireAuth, async (req, res) => {
         conditional: '条件付きYes',
         no: 'No（却下）'
       };
-      
+
       let message = `【リクエスト回答】${req.session.user.name} より\n\n` +
-                    `リクエスト: ${request.title}\n` +
-                    `回答: ${responseTypeMap[response_type]}`;
-      
+        `リクエスト: ${request.title}\n` +
+        `回答: ${responseTypeMap[response_type]}`;
+
       if (response_condition) {
         message += `\n条件: ${response_condition}`;
       }
-      
+
       await talknoteAPI.postMessage(request.talknote_group_id, message);
     } catch (error) {
       console.error('Talknote notification error:', error);
     }
-    
+
     res.json({ message: 'Response submitted' });
   } catch (error) {
     console.error('Response submission error:', error);
@@ -828,46 +828,46 @@ app.post('/api/requests/:id/complete', requireAuth, upload.single('file'), async
     if (!request) {
       return res.status(404).json({ message: 'Request not found' });
     }
-    
+
     // 受信者のみが完了報告可能
     if (request.recipient_id !== req.session.user.id) {
       return res.status(403).json({ message: 'Forbidden' });
     }
-    
+
     const { report } = req.body;
     if (!report) {
       return res.status(400).json({ message: 'Missing report content' });
     }
-    
+
     const completionData = {
       report,
       file_path: req.file ? req.file.filename : null,
       completed_at: new Date().toISOString(),
       deadline: request.deadline
     };
-    
+
     await database.completeRequest(req.params.id, completionData);
-    
+
     // Talknoteに通知
     try {
       const talknoteAPI = new TalknoteAPI(req.session.user.access_token);
       const deadlineMet = new Date(completionData.completed_at) <= new Date(request.deadline);
-      
+
       let message = `【完了報告】${req.session.user.name} より\n\n` +
-                    `リクエスト: ${request.title}\n` +
-                    `ステータス: ${deadlineMet ? '✅ 期日内完了' : '⚠️ 期日超過'}\n` +
-                    `完了日時: ${new Date(completionData.completed_at).toLocaleString('ja-JP')}\n\n` +
-                    `報告内容:\n${report}`;
-      
+        `リクエスト: ${request.title}\n` +
+        `ステータス: ${deadlineMet ? '✅ 期日内完了' : '⚠️ 期日超過'}\n` +
+        `完了日時: ${new Date(completionData.completed_at).toLocaleString('ja-JP')}\n\n` +
+        `報告内容:\n${report}`;
+
       if (req.file) {
         message += `\n\n📎 添付ファイル: ${req.file.originalname}`;
       }
-      
+
       await talknoteAPI.postMessage(request.talknote_group_id, message);
     } catch (error) {
       console.error('Talknote notification error:', error);
     }
-    
+
     res.json({ message: 'Completion report submitted' });
   } catch (error) {
     console.error('Completion submission error:', error);
@@ -886,62 +886,62 @@ app.post('/api/requests/:id/extension', requireAuth, async (req, res) => {
     if (!request) {
       return res.status(404).json({ message: 'Request not found' });
     }
-    
+
     // 受信者のみが延長申請可能
     if (request.recipient_id !== req.session.user.id) {
       return res.status(403).json({ message: 'Forbidden' });
     }
-    
+
     // 承認済みのリクエストのみ延長申請可能
     if (request.status !== 'accepted') {
       return res.status(400).json({ message: 'Can only request extension for accepted requests' });
     }
-    
+
     // 期日前のみ延長申請可能
     if (new Date() >= new Date(request.deadline)) {
       return res.status(400).json({ message: 'Cannot request extension after deadline' });
     }
-    
+
     // 既に延長申請中でないか確認
     const pendingExtension = await database.getPendingExtensionRequest(req.params.id);
     if (pendingExtension) {
       return res.status(400).json({ message: 'Extension request already pending' });
     }
-    
+
     const { new_deadline, reason } = req.body;
-    
+
     if (!new_deadline || !reason) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
-    
+
     // 新期日が現在の期日より後であることを確認
     if (new Date(new_deadline) <= new Date(request.deadline)) {
       return res.status(400).json({ message: 'New deadline must be after current deadline' });
     }
-    
+
     const extensionData = {
       request_id: req.params.id,
       requester_id: req.session.user.id,
       new_deadline,
       reason
     };
-    
+
     await database.createExtensionRequest(extensionData);
-    
+
     // Talknoteに通知
     try {
       const talknoteAPI = new TalknoteAPI(req.session.user.access_token);
       const message = `【期日延長申請】${req.session.user.name} より\n\n` +
-                      `リクエスト: ${request.title}\n` +
-                      `現在の期日: ${new Date(request.deadline).toLocaleString('ja-JP')}\n` +
-                      `希望新期日: ${new Date(new_deadline).toLocaleString('ja-JP')}\n\n` +
-                      `理由:\n${reason}`;
-      
+        `リクエスト: ${request.title}\n` +
+        `現在の期日: ${new Date(request.deadline).toLocaleString('ja-JP')}\n` +
+        `希望新期日: ${new Date(new_deadline).toLocaleString('ja-JP')}\n\n` +
+        `理由:\n${reason}`;
+
       await talknoteAPI.postMessage(request.talknote_group_id, message);
     } catch (error) {
       console.error('Talknote notification error:', error);
     }
-    
+
     res.status(201).json({ message: 'Extension request submitted' });
   } catch (error) {
     console.error('Extension request error:', error);
@@ -956,12 +956,12 @@ app.get('/api/requests/:id/extensions', requireAuth, async (req, res) => {
     if (!request) {
       return res.status(404).json({ message: 'Request not found' });
     }
-    
+
     // 権限チェック
     if (request.sender_id !== req.session.user.id && request.recipient_id !== req.session.user.id) {
       return res.status(403).json({ message: 'Forbidden' });
     }
-    
+
     const extensions = await database.getExtensionRequestsByRequestId(req.params.id);
     res.json(extensions);
   } catch (error) {
@@ -977,39 +977,39 @@ app.put('/api/requests/:id/extension/:extensionId', requireAuth, async (req, res
     if (!request) {
       return res.status(404).json({ message: 'Request not found' });
     }
-    
+
     // 送信者のみが延長申請に回答可能
     if (request.sender_id !== req.session.user.id) {
       return res.status(403).json({ message: 'Forbidden' });
     }
-    
+
     const { action } = req.body;
-    
+
     if (!action || !['approve', 'reject'].includes(action)) {
       return res.status(400).json({ message: 'Invalid action' });
     }
-    
+
     const result = await database.respondToExtensionRequest(req.params.extensionId, action);
-    
+
     // Talknoteに通知
     try {
       const talknoteAPI = new TalknoteAPI(req.session.user.access_token);
       const actionText = action === 'approve' ? '承認' : '却下';
-      
+
       let message = `【期日延長 ${actionText}】${req.session.user.name} より\n\n` +
-                    `リクエスト: ${request.title}\n`;
-      
+        `リクエスト: ${request.title}\n`;
+
       if (action === 'approve') {
         message += `新しい期日: ${new Date(result.extension.new_deadline).toLocaleString('ja-JP')}`;
       } else {
         message += `期日: ${new Date(request.deadline).toLocaleString('ja-JP')} のまま変更なし`;
       }
-      
+
       await talknoteAPI.postMessage(request.talknote_group_id, message);
     } catch (error) {
       console.error('Talknote notification error:', error);
     }
-    
+
     res.json({ message: `Extension ${action}d` });
   } catch (error) {
     console.error('Extension response error:', error);
@@ -1040,10 +1040,10 @@ app.use((req, res, next) => {
   console.log(`[404] Path not found: ${req.method} ${req.path}`);
   console.log(`[404] Headers:`, req.headers);
   console.log(`[404] Query:`, req.query);
-  
+
   // APIリクエストの場合
   if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ 
+    return res.status(404).json({
       error: 'API endpoint not found',
       path: req.path,
       method: req.method,
@@ -1057,15 +1057,15 @@ app.use((req, res, next) => {
       ]
     });
   }
-  
+
   // HTMLリクエストの場合
   if (req.accepts('html')) {
     console.log(`[404] Redirecting HTML request to /`);
     return res.redirect('/');
   }
-  
+
   // その他（JSON、CSS、JSなど）
-  res.status(404).json({ 
+  res.status(404).json({
     error: 'Not Found',
     path: req.path,
     message: 'The requested resource was not found on this server'
@@ -1082,11 +1082,11 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   URL: http://localhost:${PORT}`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`${'='.repeat(60)}`);
-  
+
   console.log(`\n📁 Directories:`);
   console.log(`   Working directory: ${__dirname}`);
   console.log(`   Public directory: ${path.join(__dirname, 'public')}`);
-  
+
   // ディレクトリ内容の確認
   console.log(`\n📂 Root directory contents:`);
   try {
@@ -1099,7 +1099,7 @@ app.listen(PORT, '0.0.0.0', () => {
   } catch (error) {
     console.error(`   Error reading directory: ${error.message}`);
   }
-  
+
   // Public ディレクトリの確認
   const publicDir = path.join(__dirname, 'public');
   if (fs.existsSync(publicDir)) {
@@ -1115,28 +1115,28 @@ app.listen(PORT, '0.0.0.0', () => {
   } else {
     console.log(`\n⚠️  Public directory not found!`);
   }
-  
+
   // ファイルチェック
   const rootIndexPath = path.join(__dirname, 'index.html');
   const publicIndexPath = path.join(publicDir, 'index.html');
   const dashboardPath = path.join(publicDir, 'dashboard.html');
   const stylesPath = path.join(publicDir, 'styles.css');
   const jsPath = path.join(publicDir, 'dashboard.js');
-  
+
   console.log(`\n📄 File Check:`);
   console.log(`   ROOT index.html: ${fs.existsSync(rootIndexPath) ? '✅ Found' : '❌ Not Found'}`);
   console.log(`   PUBLIC index.html: ${fs.existsSync(publicIndexPath) ? '✅ Found' : '❌ Not Found'}`);
   console.log(`   dashboard.html: ${fs.existsSync(dashboardPath) ? '✅ Found' : '❌ Not Found'}`);
   console.log(`   styles.css: ${fs.existsSync(stylesPath) ? '✅ Found' : '❌ Not Found'}`);
   console.log(`   dashboard.js: ${fs.existsSync(jsPath) ? '✅ Found' : '❌ Not Found'}`);
-  
+
   console.log(`\n🌐 Available Routes:`);
   console.log(`   GET  /              - Root (test page)`);
   console.log(`   GET  /health        - Health check`);
   console.log(`   GET  /app           - Main app (login)`);
   console.log(`   GET  /dashboard     - Dashboard (auth required)`);
   console.log(`   GET  /api/*         - API endpoints`);
-  
+
   console.log(`\n✨ Minimal design version with deadline extension feature`);
   console.log(`${'='.repeat(60)}\n`);
 });
