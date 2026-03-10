@@ -105,8 +105,8 @@ class TalknoteAPI {
       throw new Error('Message is empty or undefined');
     }
 
-    // api.talknote.com では message フィールド（小文字）を使用
-    const payload = { message: message };
+    // Talknote API は Message フィールド（大文字 M）を要求
+    const payload = { Message: message };
     console.log(`   Payload preview:`, JSON.stringify(payload).substring(0, 100));
 
     return await this.request('POST', `/group/post/${groupId}`, payload);
