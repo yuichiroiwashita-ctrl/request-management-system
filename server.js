@@ -282,6 +282,14 @@ app.get('/app', (req, res) => {
       
       <div id="errorMessage" class="error-message" style="display: none;"></div>
     </form>
+    
+    <div style="margin-top: 30px; padding-top: 30px; border-top: 1px solid #e5e7eb; text-align: center;">
+      <p style="font-size: 14px; color: #666; margin-bottom: 15px;">または</p>
+      <a href="/api/auth/login" style="display: inline-block; background: #2563eb; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 14px; font-weight: 500; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+        🔐 Talknoteでログイン
+      </a>
+      <p style="font-size: 12px; color: #999; margin-top: 10px;">※ アクセストークンを取得する場合</p>
+    </div>
   </div>
 
   <script>
