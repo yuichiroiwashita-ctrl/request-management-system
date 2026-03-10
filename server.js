@@ -608,25 +608,37 @@ app.post('/api/auth/simple-login', async (req, res) => {
   try {
     let user;
     
+    // ダミーユーザーデータを定義
+    const dummyUsers = {
+      '1': { id: '1', name: '岩下雄一郎', email: 'yuichiro@insp.co.jp', department: '開発部', talknote_user_id: 'user001' },
+      '2': { id: '2', name: '山田太郎', email: 'yamada@insp.co.jp', department: '営業部', talknote_user_id: 'user002' },
+      '3': { id: '3', name: '佐藤花子', email: 'sato@insp.co.jp', department: '総務部', talknote_user_id: 'user003' }
+    };
+    
+    // Google Sheets から取得を試みる
     if (sheetsService) {
-      // Google Sheets からユーザー情報を取得
-      user = await sheetsService.getUserById(userId);
-      
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
+      try {
+        user = await sheetsService.getUserById(userId);
+        if (user) {
+          console.log(`✅ User found in Google Sheets: ${user.name}`);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user from Google Sheets:', error);
+        // フォールバックへ続行
       }
-    } else {
-      // フォールバック: ダミーデータ
-      const users = {
-        '1': { id: '1', name: '岩下雄一郎', email: 'yuichiro@insp.co.jp', department: '開発部' },
-        '2': { id: '2', name: '山田太郎', email: 'yamada@insp.co.jp', department: '営業部' },
-        '3': { id: '3', name: '佐藤花子', email: 'sato@insp.co.jp', department: '総務部' }
-      };
-      user = users[userId];
-      
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Google Sheets から取得できなかった場合、ダミーデータを使用
+    if (!user) {
+      user = dummyUsers[userId];
+      if (user) {
+        console.log(`⚠️  Using dummy user data: ${user.name}`);
       }
+    }
+    
+    // ユーザーが見つからない場合
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
     
     // セッションに保存
@@ -643,6 +655,7 @@ app.post('/api/auth/simple-login', async (req, res) => {
     // DBに保存
     await database.saveUser(req.session.user);
     
+    console.log(`✅ Login successful: ${user.name} (${user.email})`);
     res.json({ success: true, user: req.session.user });
   } catch (error) {
     console.error('Simple login error:', error);
