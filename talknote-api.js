@@ -11,51 +11,85 @@ class TalknoteAPI {
   }
 
   async request(method, endpoint, data = null) {
-    try {
-      const config = {
-        method,
-        url: `${this.baseURL}${endpoint}`,
-        headers: {
-          'X-TALKNOTE-OAUTH-TOKEN': this.accessToken,
-          'Content-Type': 'application/json'
-        }
-      };
+    // 両方の認証ヘッダー形式を試す
+    const authHeaders = [
+      { 'Authorization': `Bearer ${this.accessToken}` },
+      { 'X-TALKNOTE-OAUTH-TOKEN': this.accessToken },
+      { 'X-Talknote-Token': this.accessToken }
+    ];
 
-      if (data) {
-        if (method === 'GET') {
-          config.params = data;
-        } else {
-          config.data = data;
+    for (let i = 0; i < authHeaders.length; i++) {
+      try {
+        const config = {
+          method,
+          url: `${this.baseURL}${endpoint}`,
+          headers: {
+            ...authHeaders[i],
+            'Content-Type': 'application/json'
+          }
+        };
+
+        if (data) {
+          if (method === 'GET') {
+            config.params = data;
+          } else {
+            config.data = data;
+          }
+        }
+
+        console.log(`📡 API Request (attempt ${i + 1}): ${method} ${config.url}`);
+        console.log(`   Auth header:`, Object.keys(authHeaders[i])[0]);
+        const response = await axios(config);
+        console.log(`✅ API Response: ${response.status}`);
+        return response.data;
+      } catch (error) {
+        console.log(`❌ Attempt ${i + 1} failed with ${Object.keys(authHeaders[i])[0]}: ${error.response?.status}`);
+        if (error.response?.data) {
+          console.log(`   Error data:`, error.response.data);
+        }
+
+        // 最後の試行でもエラーの場合のみスロー
+        if (i === authHeaders.length - 1) {
+          console.error(`❌ All auth header formats failed for: ${method} ${this.baseURL}${endpoint}`);
+          throw error;
         }
       }
-
-      const response = await axios(config);
-      return response.data;
-    } catch (error) {
-      console.error('Talknote API Error:', error.response?.data || error.message);
-      throw error;
     }
   }
 
   // ユーザー情報取得
   async getCurrentUser() {
-    // 複数のエンドポイントを試す
-    const endpoints = ['/users/me', '/me', '/user', '/users/current'];
+    // Talknote API で考えられるエンドポイントをすべて試す
+    const endpoints = [
+      '/users/me',      // 標準的なエンドポイント
+      '/me',            // シンプルなエンドポイント
+      '/user/me',       // 別のパターン
+      '/user',          // 現在のユーザー
+      '/users/current', // 現在のユーザー
+      '/account',       // アカウント情報
+      '/profile'        // プロフィール
+    ];
+
+    let lastError = null;
 
     for (const endpoint of endpoints) {
       try {
-        console.log(`🔄 Trying endpoint: ${endpoint}`);
+        console.log(`🔄 Trying user endpoint: ${endpoint}`);
         const result = await this.request('GET', endpoint);
         console.log(`✅ Success with endpoint: ${endpoint}`);
+        console.log(`   User data:`, result);
         return result;
       } catch (error) {
         console.log(`❌ Failed endpoint ${endpoint}: ${error.response?.status}`);
-        // 最後のエンドポイントで失敗した場合のみエラーをスロー
-        if (endpoint === endpoints[endpoints.length - 1]) {
-          throw error;
-        }
+        lastError = error;
       }
     }
+
+    // すべてのエンドポイントが失敗した場合
+    console.error('❌ All user endpoints failed!');
+    console.error('   Tried:', endpoints);
+    console.error('   Last error:', lastError.response?.status, lastError.response?.data);
+    throw new Error(`Could not fetch user data. Tried ${endpoints.length} endpoints. Last error: ${lastError.response?.status} - ${JSON.stringify(lastError.response?.data)}`);
   }
 
   // ユーザー一覧取得
