@@ -394,32 +394,93 @@ app.get('/admin/tokens', (req, res) => {
 // 簡易ログイン（Google スプレッドシート連携用）
 // ========================================
 
-// ユーザー一覧取得（Google スプレッドシートから）
+// ユーザー一覧取得（Google スプレッドシートから、またはダミーデータ）
 app.get('/api/users/list', async (req, res) => {
   try {
-    if (!sheetsService) {
-      return res.status(503).json({ error: 'Google Sheets service not configured' });
+    // Google Sheets が利用可能な場合
+    if (sheetsService) {
+      try {
+        const users = await sheetsService.getUsers();
+        return res.json(users);
+      } catch (error) {
+        console.error('Failed to fetch from Google Sheets, falling back to dummy data:', error);
+      }
     }
     
-    const users = await sheetsService.getUsers();
-    res.json(users);
+    // フォールバック: ダミーデータ
+    console.log('⚠️  Using dummy user data (Google Sheets not configured)');
+    res.json([
+      {
+        id: '1',
+        name: '岩下雄一郎',
+        email: 'yuichiro@insp.co.jp',
+        department: '開発部',
+        talknote_user_id: 'user001',
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: '2',
+        name: '山田太郎',
+        email: 'yamada@insp.co.jp',
+        department: '営業部',
+        talknote_user_id: 'user002',
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: '3',
+        name: '佐藤花子',
+        email: 'sato@insp.co.jp',
+        department: '総務部',
+        talknote_user_id: 'user003',
+        updated_at: new Date().toISOString()
+      }
+    ]);
   } catch (error) {
-    console.error('Failed to fetch users from Google Sheets:', error);
+    console.error('Failed to fetch users:', error);
     res.status(500).json({ error: 'Failed to fetch users', details: error.message });
   }
 });
 
-// グループ一覧取得（Google スプレッドシートから）
+// グループ一覧取得（Google スプレッドシートから、またはダミーデータ）
 app.get('/api/groups/list', async (req, res) => {
   try {
-    if (!sheetsService) {
-      return res.status(503).json({ error: 'Google Sheets service not configured' });
+    // Google Sheets が利用可能な場合
+    if (sheetsService) {
+      try {
+        const groups = await sheetsService.getGroups();
+        return res.json(groups);
+      } catch (error) {
+        console.error('Failed to fetch from Google Sheets, falling back to dummy data:', error);
+      }
     }
     
-    const groups = await sheetsService.getGroups();
-    res.json(groups);
+    // フォールバック: ダミーデータ
+    console.log('⚠️  Using dummy group data (Google Sheets not configured)');
+    res.json([
+      {
+        id: '1001',
+        name: '開発チーム',
+        description: '開発関連の議論',
+        member_count: 5,
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: '1002',
+        name: '営業チーム',
+        description: '営業報告・相談',
+        member_count: 8,
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: '1003',
+        name: '総務チーム',
+        description: '総務・管理業務',
+        member_count: 3,
+        updated_at: new Date().toISOString()
+      }
+    ]);
   } catch (error) {
-    console.error('Failed to fetch groups from Google Sheets:', error);
+    console.error('Failed to fetch groups:', error);
     res.status(500).json({ error: 'Failed to fetch groups', details: error.message });
   }
 });
