@@ -6,15 +6,25 @@ const path = require('path');
 const fs = require('fs');
 const database = require('./database');
 const { TalknoteAPI, TalknoteOAuth } = require('./talknote-api');
-const GoogleSheetsService = require('./google-sheets-service');
+
+// Google Sheets 連携（オプショナル）
+let GoogleSheetsService = null;
+let sheetsService = null;
+
+try {
+  GoogleSheetsService = require('./google-sheets-service');
+  const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID || '';
+  sheetsService = SPREADSHEET_ID ? new GoogleSheetsService(SPREADSHEET_ID) : null;
+  if (sheetsService) {
+    console.log('✅ Google Sheets integration enabled');
+  }
+} catch (error) {
+  console.log('⚠️  Google Sheets integration disabled (optional feature)');
+}
 
 const app = express();
 // GenSpark Spaceを含む様々な環境に対応
 const PORT = process.env.PORT || process.env.GENSPARK_PORT || process.env.SERVER_PORT || 8080;
-
-// Google Sheets 初期化
-const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID || '';
-const sheetsService = SPREADSHEET_ID ? new GoogleSheetsService(SPREADSHEET_ID) : null;
 
 // プロキシ環境対応
 app.set('trust proxy', true);
