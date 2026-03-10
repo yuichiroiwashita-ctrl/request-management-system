@@ -39,6 +39,8 @@ class TalknoteAPI {
 
         console.log(`📡 API Request (attempt ${i + 1}): ${method} ${config.url}`);
         console.log(`   Auth header:`, Object.keys(authHeaders[i])[0]);
+        console.log(`   Request body:`, JSON.stringify(config.data));
+
         const response = await axios(config);
         console.log(`✅ API Response: ${response.status}`);
         return response.data;
@@ -109,32 +111,15 @@ class TalknoteAPI {
 
   // グループにメッセージ投稿
   async postMessage(groupId, message) {
-    // Talknote API が期待する可能性のあるフィールド名を試す
-    const payloads = [
-      { message: message },           // 小文字 message
-      { Message: message },           // 大文字 Message
-      { text: message },              // text
-      { content: message },           // content
-      { body: message },              // body
-      { note: { message: message } }  // ネストされた形式
-    ];
+    console.log(`📤 postMessage called`);
+    console.log(`   Group ID: ${groupId}`);
+    console.log(`   Message: ${message.substring(0, 50)}...`);
 
-    let lastError = null;
+    // まず大文字の Message を試す（エラーメッセージから推測）
+    const payload = { Message: message };
+    console.log(`   Payload:`, JSON.stringify(payload));
 
-    for (const payload of payloads) {
-      try {
-        console.log(`📤 Trying payload format:`, Object.keys(payload)[0]);
-        const result = await this.request('POST', `/group/post/${groupId}`, payload);
-        console.log(`✅ Post successful with format:`, Object.keys(payload)[0]);
-        return result;
-      } catch (error) {
-        console.log(`❌ Failed with format:`, Object.keys(payload)[0]);
-        lastError = error;
-      }
-    }
-
-    console.error(`❌ All payload formats failed for group ${groupId}`);
-    throw lastError;
+    return await this.request('POST', `/group/post/${groupId}`, payload);
   }
 
   // タイムラインにメッセージ投稿
