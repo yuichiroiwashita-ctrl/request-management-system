@@ -39,7 +39,23 @@ class TalknoteAPI {
 
   // ユーザー情報取得
   async getCurrentUser() {
-    return await this.request('GET', '/user');
+    // 複数のエンドポイントを試す
+    const endpoints = ['/users/me', '/me', '/user', '/users/current'];
+
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`🔄 Trying endpoint: ${endpoint}`);
+        const result = await this.request('GET', endpoint);
+        console.log(`✅ Success with endpoint: ${endpoint}`);
+        return result;
+      } catch (error) {
+        console.log(`❌ Failed endpoint ${endpoint}: ${error.response?.status}`);
+        // 最後のエンドポイントで失敗した場合のみエラーをスロー
+        if (endpoint === endpoints[endpoints.length - 1]) {
+          throw error;
+        }
+      }
+    }
   }
 
   // ユーザー一覧取得
@@ -92,7 +108,7 @@ class TalknoteOAuth {
     ];
 
     const scopeString = (scopes.length > 0 ? scopes : defaultScopes).join(' ');
-    
+
     const params = new URLSearchParams({
       client_id: this.clientId,
       redirect_uri: this.redirectUri,
@@ -106,21 +122,25 @@ class TalknoteOAuth {
   // 認可コードをアクセストークンに交換
   async exchangeCodeForToken(code) {
     try {
-      const response = await axios.post(`${this.authBaseURL}/token`, {
+      // URLSearchParams を使用して application/x-www-form-urlencoded 形式でデータを送信
+      const params = new URLSearchParams({
         client_id: this.clientId,
         client_secret: this.clientSecret,
         redirect_uri: this.redirectUri,
         grant_type: 'authorization_code',
         code: code
-      }, {
+      });
+
+      const response = await axios.post(`${this.authBaseURL}/token`, params.toString(), {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         }
       });
 
+      console.log('✅ Token exchange successful:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Token exchange error:', error.response?.data || error.message);
+      console.error('❌ Token exchange error:', error.response?.status, error.response?.data || error.message);
       throw error;
     }
   }
@@ -128,12 +148,15 @@ class TalknoteOAuth {
   // リフレッシュトークンで新しいアクセストークンを取得
   async refreshAccessToken(refreshToken) {
     try {
-      const response = await axios.post(`${this.authBaseURL}/token`, {
+      // URLSearchParams を使用して application/x-www-form-urlencoded 形式でデータを送信
+      const params = new URLSearchParams({
         client_id: this.clientId,
         client_secret: this.clientSecret,
         grant_type: 'refresh_token',
         refresh_token: refreshToken
-      }, {
+      });
+
+      const response = await axios.post(`${this.authBaseURL}/token`, params.toString(), {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         }

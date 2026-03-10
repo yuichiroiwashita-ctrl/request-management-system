@@ -429,19 +429,39 @@ app.get('/api/auth/login', (req, res) => {
 
 // OAuth コールバック（Talknote が /api/ にリダイレクトする場合に対応）
 app.get('/api/', async (req, res) => {
+  console.log('=== OAuth Callback ===');
+  console.log('Query params:', req.query);
+  console.log('Code:', req.query.code);
+  console.log('State:', req.query.state);
+
   const { code } = req.query;
 
   if (!code) {
-    return res.redirect('/?error=no_code');
+    console.error('❌ No code provided');
+    return res.send(`
+      <html>
+        <head><title>Error - No Code</title></head>
+        <body style="font-family: sans-serif; padding: 50px; text-align: center;">
+          <h1>❌ エラー: 認証コードがありません</h1>
+          <p>OAuth コールバックに認証コード（code）が含まれていません。</p>
+          <p>Query params: ${JSON.stringify(req.query)}</p>
+          <a href="/app" style="display: inline-block; margin-top: 20px; padding: 10px 20px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px;">ログイン画面に戻る</a>
+        </body>
+      </html>
+    `);
   }
 
   try {
+    console.log('🔄 Exchanging code for token...');
     // アクセストークンを取得
     const tokenData = await talknoteOAuth.exchangeCodeForToken(code);
+    console.log('✅ Token received:', tokenData.access_token ? 'Yes' : 'No');
 
+    console.log('🔄 Fetching user data...');
     // Talknote APIでユーザー情報を取得
     const talknoteAPI = new TalknoteAPI(tokenData.access_token);
     const userData = await talknoteAPI.getCurrentUser();
+    console.log('✅ User data:', userData);
 
     // ユーザー情報をDBに保存
     const user = {
@@ -453,15 +473,35 @@ app.get('/api/', async (req, res) => {
       refresh_token: tokenData.refresh_token
     };
 
+    console.log('💾 Saving user to database...');
     await database.saveUser(user);
+    console.log('✅ User saved');
 
     // セッションに保存
     req.session.user = user;
+    console.log('✅ Session saved');
 
+    console.log('🔄 Redirecting to /dashboard');
     res.redirect('/dashboard');
   } catch (error) {
-    console.error('OAuth callback error:', error);
-    res.redirect('/?error=auth_failed');
+    console.error('❌ OAuth callback error:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+
+    // エラー詳細を表示
+    res.send(`
+      <html>
+        <head><title>OAuth Error</title></head>
+        <body style="font-family: sans-serif; padding: 50px;">
+          <h1>❌ OAuth 認証エラー</h1>
+          <h2>エラー内容:</h2>
+          <pre style="background: #f5f5f5; padding: 20px; border-radius: 8px; overflow-x: auto;">${error.message}</pre>
+          <h2>スタックトレース:</h2>
+          <pre style="background: #f5f5f5; padding: 20px; border-radius: 8px; overflow-x: auto; font-size: 12px;">${error.stack}</pre>
+          <a href="/app" style="display: inline-block; margin-top: 20px; padding: 10px 20px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px;">ログイン画面に戻る</a>
+        </body>
+      </html>
+    `);
   }
 });
 
