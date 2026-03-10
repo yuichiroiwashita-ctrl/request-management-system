@@ -109,7 +109,32 @@ class TalknoteAPI {
 
   // グループにメッセージ投稿
   async postMessage(groupId, message) {
-    return await this.request('POST', `/group/post/${groupId}`, { message });
+    // Talknote API が期待する可能性のあるフィールド名を試す
+    const payloads = [
+      { message: message },           // 小文字 message
+      { Message: message },           // 大文字 Message
+      { text: message },              // text
+      { content: message },           // content
+      { body: message },              // body
+      { note: { message: message } }  // ネストされた形式
+    ];
+
+    let lastError = null;
+
+    for (const payload of payloads) {
+      try {
+        console.log(`📤 Trying payload format:`, Object.keys(payload)[0]);
+        const result = await this.request('POST', `/group/post/${groupId}`, payload);
+        console.log(`✅ Post successful with format:`, Object.keys(payload)[0]);
+        return result;
+      } catch (error) {
+        console.log(`❌ Failed with format:`, Object.keys(payload)[0]);
+        lastError = error;
+      }
+    }
+
+    console.error(`❌ All payload formats failed for group ${groupId}`);
+    throw lastError;
   }
 
   // タイムラインにメッセージ投稿
