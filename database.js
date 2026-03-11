@@ -160,14 +160,54 @@ class Database {
     });
   }
 
-  updateRequestStatus(requestId, status, responseData = {}) {
+  // 送信リクエスト一覧取得（自分が作成したリクエスト）
+  getSentRequests(userId) {
     return new Promise((resolve, reject) => {
       const sql = `
+        SELECT * FROM requests 
+        WHERE sender_id = ?
+        ORDER BY created_at DESC
+      `;
+      this.db.all(sql, [userId], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  }
+
+  // 受信リクエスト一覧取得（自分宛てのリクエスト）
+  getReceivedRequests(userId) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT * FROM requests 
+        WHERE recipient_id = ?
+        ORDER BY created_at DESC
+      `;
+      this.db.all(sql, [userId], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows || []);
+      });
+    });
+  }
+
+  updateRequestStatus(requestId, status, responseData = {}) {
+    return new Promise((resolve, reject) => {
+      // responseData が空の場合は status のみ更新
+      const sql = responseData.response_type ? `
         UPDATE requests 
         SET status = ?, response_type = ?, response_condition = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
+      ` : `
+        UPDATE requests 
+        SET status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
       `;
-      this.db.run(sql, [status, responseData.response_type, responseData.response_condition, requestId], function (err) {
+
+      const params = responseData.response_type
+        ? [status, responseData.response_type, responseData.response_condition, requestId]
+        : [status, requestId];
+
+      this.db.run(sql, params, function (err) {
         if (err) reject(err);
         else resolve(this.changes);
       });

@@ -327,6 +327,11 @@ body {
   color: #6b7280;
 }
 
+.badge-in-progress {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
 .badge-accepted {
   background-color: #dbeafe;
   color: #1e40af;
@@ -342,6 +347,17 @@ body {
   color: #991b1b;
 }
 
+.badge-warning {
+  background-color: #fee2e2;
+  color: #991b1b;
+  font-weight: 600;
+}
+
+.badge-success {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
 .badge-extension-requested {
   background-color: #fef3c7;
   color: #92400e;
@@ -355,6 +371,21 @@ body {
 .badge-extension-rejected {
   background-color: #fecaca;
   color: #991b1b;
+}
+
+/* リクエストカードの警告スタイル */
+.request-card-warning {
+  border-left: 4px solid #ef4444;
+  background-color: #fef2f2;
+}
+
+.btn-success {
+  color: #ffffff;
+  background-color: #10b981;
+}
+
+.btn-success:hover {
+  background-color: #059669;
 }
 
 /* ========================================

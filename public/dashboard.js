@@ -61,7 +61,23 @@ async function loadStats() {
 
 async function loadRequests() {
   try {
-    const response = await fetch('/api/requests');
+    let endpoint = '/api/requests';
+
+    // タブに応じてエンドポイントを変更
+    switch (state.currentTab) {
+      case 'sent':
+        endpoint = '/api/requests/sent';
+        break;
+      case 'received':
+        endpoint = '/api/requests/received';
+        break;
+      case 'all':
+      default:
+        endpoint = '/api/requests';
+        break;
+    }
+
+    const response = await fetch(endpoint);
     state.requests = await response.json();
   } catch (error) {
     console.error('Requests load error:', error);
@@ -103,9 +119,10 @@ async function loadGroups() {
 function setupEventListeners() {
   // タブ切り替え
   document.querySelectorAll('.nav-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
+    tab.addEventListener('click', async () => {
       state.currentTab = tab.dataset.tab;
       updateActiveTab();
+      await loadRequests(); // データを再取得
       renderRequests();
     });
   });
@@ -192,13 +209,8 @@ function renderStats() {
 }
 
 function renderRequests() {
-  let filteredRequests = state.requests;
-
-  if (state.currentTab === 'received') {
-    filteredRequests = state.requests.filter(r => r.recipient_id === state.currentUser.id);
-  } else if (state.currentTab === 'sent') {
-    filteredRequests = state.requests.filter(r => r.sender_id === state.currentUser.id);
-  }
+  // API で既にフィルタリングされているので、ここでのフィルタリングは不要
+  const filteredRequests = state.requests;
 
   const listEl = document.getElementById('requests-list');
   const emptyEl = document.getElementById('empty-state');
@@ -216,12 +228,14 @@ function renderRequests() {
     const statusBadge = getStatusBadge(request);
     const extensionBadge = getExtensionBadge(request);
     const actions = getRequestActions(request);
+    const deadlineWarning = getDeadlineWarning(request);
 
     return `
-      <div class="request-card" data-request-id="${request.id}">
+      <div class="request-card ${deadlineWarning ? 'request-card-warning' : ''}" data-request-id="${request.id}">
         <div class="request-card-header">
           <div class="request-title">${escapeHtml(request.title)}</div>
-          <div style="display: flex; gap: 8px;">
+          <div style="display: flex; gap: 8px; align-items: center;">
+            ${deadlineWarning ? `<span class="badge badge-warning">${deadlineWarning}</span>` : ''}
             ${statusBadge}
             ${extensionBadge}
           </div>
@@ -255,6 +269,10 @@ function renderRequests() {
         openExtensionRequestModal(requestId);
       } else if (action === 'approve-extension' || action === 'reject-extension') {
         await handleExtensionResponse(requestId, action);
+      } else if (action === 'change-status-in-progress') {
+        await changeRequestStatus(requestId, 'in_progress');
+      } else if (action === 'change-status-completed') {
+        await changeRequestStatus(requestId, 'completed');
       }
     });
   });
@@ -262,13 +280,59 @@ function renderRequests() {
 
 function getStatusBadge(request) {
   const statusMap = {
-    pending: { class: 'badge-pending', text: '承認待ち' },
-    accepted: { class: 'badge-accepted', text: '承認済み' },
+    pending: { class: 'badge-pending', text: '未着手' },
+    in_progress: { class: 'badge-in-progress', text: '進行中' },
     completed: { class: 'badge-completed', text: '完了' },
+    accepted: { class: 'badge-accepted', text: '承認済み' },
     rejected: { class: 'badge-rejected', text: '却下' }
   };
   const status = statusMap[request.status] || statusMap.pending;
   return `<span class="badge ${status.class}">${status.text}</span>`;
+}
+
+// 期日警告を取得
+function getDeadlineWarning(request) {
+  if (request.status === 'completed') return null;
+
+  const now = new Date();
+  const deadline = new Date(request.deadline);
+  const diffHours = (deadline - now) / (1000 * 60 * 60);
+
+  if (diffHours < 0) {
+    return '⚠️ 期限超過';
+  } else if (diffHours < 24) {
+    return '🔴 期限間近';
+  } else if (diffHours < 48) {
+    return '🟡 期限接近';
+  }
+
+  return null;
+}
+
+// ステータス変更
+async function changeRequestStatus(requestId, newStatus) {
+  try {
+    const response = await fetch(`/api/requests/${requestId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update status');
+    }
+
+    // リクエスト一覧を再読み込み
+    await loadRequests();
+    renderRequests();
+
+    // トースト通知（オプション）
+    console.log('✅ Status updated successfully');
+  } catch (error) {
+    console.error('Status update error:', error);
+    alert('ステータスの更新に失敗しました: ' + error.message);
+  }
 }
 
 function getExtensionBadge(request) {
@@ -293,8 +357,25 @@ function getRequestActions(request) {
 
   let actions = [];
 
-  // 期日延長申請ボタン（受信者、承認済み、期日前、未完了、延長申請中でない）
-  if (isRecipient && request.status === 'accepted' && isBeforeDeadline &&
+  // 受信者のアクション（ステータス変更ボタン）
+  if (isRecipient && request.status !== 'completed') {
+    if (request.status === 'pending') {
+      actions.push(`
+        <button class="btn btn-sm btn-primary" data-action="change-status-in-progress" data-request-id="${request.id}">
+          着手する（進行中）
+        </button>
+      `);
+    } else if (request.status === 'in_progress') {
+      actions.push(`
+        <button class="btn btn-sm btn-success" data-action="change-status-completed" data-request-id="${request.id}">
+          完了にする
+        </button>
+      `);
+    }
+  }
+
+  // 期日延長申請ボタン（受信者、未完了、期日前、延長申請中でない）
+  if (isRecipient && request.status !== 'completed' && isBeforeDeadline &&
     (!request.extension_status || request.extension_status === 'rejected')) {
     actions.push(`
       <button class="btn btn-sm btn-secondary" data-action="request-extension" data-request-id="${request.id}">
