@@ -10,14 +10,15 @@ class TalknoteAPI {
     this.accessToken = token;
   }
 
-  async request(method, endpoint, data = null) {
+  async request(method, endpoint, data = null, customHeaders = {}) {
     try {
       const config = {
         method,
         url: `${this.baseURL}${endpoint}`,
         headers: {
           'X-TALKNOTE-OAUTH-TOKEN': this.accessToken,  // 公式ドキュメントに従う
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...customHeaders
         }
       };
 
@@ -105,11 +106,29 @@ class TalknoteAPI {
       throw new Error('Message is empty or undefined');
     }
 
-    // Talknote API は Message フィールド（大文字 M）を要求
-    const payload = { Message: message };
-    console.log(`   Payload preview:`, JSON.stringify(payload).substring(0, 100));
+    // Talknote API のドキュメントでは小文字の "message" と記載されているが、
+    // バリデーションエラーでは大文字の "Message" を要求している。
+    // まず application/x-www-form-urlencoded でフォーマットを試す
+    const params = new URLSearchParams();
+    params.append('message', message);
 
-    return await this.request('POST', `/group/post/${groupId}`, payload);
+    console.log(`   Trying form-urlencoded format with lowercase 'message'...`);
+
+    try {
+      return await this.request('POST', `/group/post/${groupId}`, params.toString(), {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      });
+    } catch (error) {
+      console.log(`⚠️  Form-urlencoded failed (${error.response?.status}), trying JSON with lowercase 'message'...`);
+      try {
+        const payload = { message: message };
+        return await this.request('POST', `/group/post/${groupId}`, payload);
+      } catch (error2) {
+        console.log(`⚠️  Lowercase 'message' failed (${error2.response?.status}), trying uppercase 'Message'...`);
+        const payload = { Message: message };
+        return await this.request('POST', `/group/post/${groupId}`, payload);
+      }
+    }
   }
 
   // タイムラインにメッセージ投稿
